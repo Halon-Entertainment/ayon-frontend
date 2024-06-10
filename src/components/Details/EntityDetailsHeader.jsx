@@ -8,10 +8,11 @@ import styled from 'styled-components'
 import { OverflowField } from '@ynput/ayon-react-components'
 import copyToClipboard from '/src/helpers/copyToClipboard'
 import getShimmerStyles from '/src/styles/getShimmerStyles'
+import { productTypes } from '/src/features/project'
 
 const ToolsStyled = styled.div`
   display: flex;
-  gap: 4px;
+  gap: var(--base-gap-small);
   justify-content: end;
 
   flex: 1;
@@ -34,7 +35,7 @@ const EntityDetailsHeader = ({
   hideThumbnail,
   onThumbnailUpload,
 }) => {
-  const { folders, tasks, productTypes } = useSelector((state) => state.project)
+  const { folders, tasks } = useSelector((state) => state.project)
   const changes = useSelector((state) => state.editor.changes)
   const uri = useSelector((state) => state.context.uri)
 

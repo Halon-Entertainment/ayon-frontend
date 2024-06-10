@@ -11,7 +11,9 @@ import contextReducer, { contextLocalItems } from './features/context'
 import projectReducer from './features/project'
 import editorReducer from './features/editor'
 import dashboardReducer, { dashboardLocalItems } from './features/dashboard'
+import detailsReducer, { detailsLocalItems } from './features/details'
 import addonsManagerReducer from './features/addonsManager'
+import previewReducer from './features/preview'
 
 import App from './app'
 
@@ -37,13 +39,21 @@ const store = configureStore({
     project: projectReducer,
     editor: editorReducer,
     dashboard: dashboardReducer,
+    details: detailsReducer,
     addonsManager: addonsManagerReducer,
+    preview: previewReducer,
     [ayonApi.reducerPath]: ayonApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(ayonApi.middleware)
-      .concat(localStorageMiddleware({ ...dashboardLocalItems, ...contextLocalItems })),
+      .concat(
+        localStorageMiddleware({
+          ...dashboardLocalItems,
+          ...contextLocalItems,
+          ...detailsLocalItems,
+        }),
+      ),
 })
 
 setupListeners(store.dispatch)

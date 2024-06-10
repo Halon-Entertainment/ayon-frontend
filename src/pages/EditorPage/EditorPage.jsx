@@ -36,6 +36,7 @@ import {
   onForceChange,
   onNewChanges,
   onRevert,
+  updateNodes,
 } from '/src/features/editor'
 import EditorPanel from './EditorPanel'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
@@ -86,6 +87,9 @@ const EditorPage = () => {
   const attribFields = attribsData.filter((a) =>
     a.scope.some((s) => ['folder', 'task'].includes(s)),
   )
+
+  // these attributes are not inherited when creating new nodes
+  const attribsNotInherited = attribFields.filter((a) => !a.data?.inherit).map((a) => a.name)
 
   const pageFocusRef = useRef(null)
 
@@ -627,6 +631,11 @@ const EditorPage = () => {
       // copy over parents if they have any
       if (parent) {
         patchAttrib = { ...parent?.data?.attrib } || {}
+
+        // remove any non-inherited attribs
+        for (const key of attribsNotInherited) {
+          delete patchAttrib[key]
+        }
       }
       for (const key in entityChanges || {}) {
         if (key.startsWith('__')) continue
@@ -797,12 +806,19 @@ const EditorPage = () => {
           }
         }
 
+        const parentAttrib = { ...(rootData[entityId]?.data?.attrib || {}) }
+
+        // remove any non-inherited attribs
+        for (const key of attribsNotInherited) {
+          delete parentAttrib[key]
+        }
+
         // patch is original data with updated data
         const patch = {
           data: {
             ...rootData[entityId]?.data,
             ...entityChanges,
-            attrib: { ...rootData[entityId]?.data?.attrib, ...patchAttrib },
+            attrib: { ...parentAttrib, ...patchAttrib },
             ownAttrib: ownAttrib,
           },
           leaf: rootData[entityId]?.leaf,
@@ -1082,6 +1098,13 @@ const EditorPage = () => {
       }
 
       for (const data of nodesData) {
+        const parentAttrib = { ...(parentData?.attrib || {}) }
+
+        // remove any non-inherited attribs
+        for (const key of attribsNotInherited) {
+          delete parentAttrib[key]
+        }
+
         const newNode = {
           leaf: true,
           name: `new${capitalize(entityType)}${
@@ -1090,7 +1113,7 @@ const EditorPage = () => {
           }`,
           id: uuid1().replace(/-/g, ''),
           status: parentData?.status || statusesOrder[0] || undefined,
-          attrib: parentData?.attrib || {},
+          attrib: parentAttrib,
           ownAttrib: [],
           __entityType: entityType,
           __parentId: parentId || 'root',
@@ -1108,11 +1131,6 @@ const EditorPage = () => {
         if (entityType === 'folder') {
           newNode['parentId'] = parentId
           newNode['folderType'] = parentData?.folderType
-          if (newNode.__parentId === 'root') {
-            // all attrib are it's own
-            // No. They are not! Root must inherit from project - martin
-            //newNode['ownAttrib'] = Object.keys(newNode.attrib)
-          }
           folderIds.push(newNode.id)
         } else if (entityType === 'task') {
           newNode['folderId'] = parentId
@@ -1532,16 +1550,11 @@ const EditorPage = () => {
 
     if (!id || !type) return
 
-    // refetch data for that entity
-    if (type === 'folder') {
-      loadNewBranches([id], true)
-    } else {
-      // it's a task so we need to find it in data and then refetch it's parent
-      const parent = rootData[id]?.data?.folderId
-      if (parent) {
-        loadNewBranches([parent], true)
-      }
-    }
+    // patch new updatedAt value to node
+    const newDate = new Date().toISOString()
+    const newData = { id, updatedAt: newDate }
+
+    dispatch(updateNodes({ updated: [newData] }))
   }
 
   const tableRef = useRef(null)

@@ -30,7 +30,7 @@ import {
   useModifyAddonOverrideMutation,
 } from '/src/services/addonSettings'
 
-import { usePromoteBundleMutation } from '/src/services/bundles'
+import { usePromoteBundleMutation } from '/src/services/bundles/updateBundles'
 import { confirmDialog } from 'primereact/confirmdialog'
 
 import { getValueByPath, setValueByPath, sameKeysStructure, compareObjects } from './utils'
@@ -143,7 +143,6 @@ const AddonSettings = ({ projectName, showSites = false }) => {
   }
 
   const reloadAddons = (keys) => {
-    console.log('reloadAddons', keys)
     setLocalData((localData) => {
       const newData = {}
       for (const key in localData) {
@@ -164,6 +163,11 @@ const AddonSettings = ({ projectName, showSites = false }) => {
       if (!changedKeys[key]?.length) continue
       const [addonName, addonVersion, variant, siteId, projectName] = key.split('|')
 
+      const payloadData = {
+        ...localData[key],
+        __pinned_fields__: changedKeys[key],
+      }
+
       try {
         const payload = {
           addonName,
@@ -171,7 +175,7 @@ const AddonSettings = ({ projectName, showSites = false }) => {
           projectName,
           siteId,
           variant,
-          data: localData[key],
+          data: payloadData,
         }
         await setAddonSettings(payload).unwrap()
 
@@ -397,7 +401,7 @@ const AddonSettings = ({ projectName, showSites = false }) => {
     }
 
     if (!sameKeysStructure(oldValue, value)) {
-      toast.error('Icompatible data structure')
+      toast.error('Incompatible data structure')
       console.log('Old value', oldValue)
       console.log('New value', value)
       return

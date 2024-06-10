@@ -13,12 +13,12 @@ const StyledFooter = styled.div`
   flex-direction: column;
   width: 100%;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--base-gap-large);
 
   div {
     display: flex;
     width: 100%;
-    gap: 4px;
+    gap: var(--base-gap-small);
 
     & > * {
       flex: 1;
@@ -53,7 +53,7 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
   const [uploadPackages] = useUploadDependencyPackagesMutation()
 
   let endPoint = 'installers'
-  if (type === 'package') endPoint = 'dependency_packages'
+  if (type === 'package') endPoint = 'dependencyPackages'
   const typeLabel =
     type === 'package' ? 'Dependency Package' : type === 'addon' ? 'Addon' : 'Installer'
 
@@ -86,7 +86,7 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
       console.log('finished: created ' + type)
       return true
     } catch (error) {
-      setErrorMessage(error?.response?.data?.detail)
+      setErrorMessage(error?.data?.detail)
       console.error(error)
       return false
     }

@@ -1,6 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit'
 import getInitialStateLocalStorage from './middleware/getInitialStateLocalStorage'
 
+export const filterActivityTypes = {
+  activity: ['comment', 'version.publish', 'status.change', 'assignee.add', 'assignee.remove'],
+  comments: ['comment'],
+  publishes: ['version.publish'],
+  checklists: ['checklist'],
+}
+
 const dashboardSlice = createSlice({
   name: 'dashboard',
   initialState: {
@@ -13,7 +20,6 @@ const dashboardSlice = createSlice({
       filter: getInitialStateLocalStorage('dashboard-tasks-filter', ''),
       assignees: getInitialStateLocalStorage('dashboard-tasks-assignees', []),
       assigneesIsMe: getInitialStateLocalStorage('dashboard-tasks-assigneesIsMe', true),
-      attributesOpen: getInitialStateLocalStorage('dashboard-tasks-attributesOpen', true),
       collapsedColumns: getInitialStateLocalStorage('dashboard-tasks-collapsedColumns', []),
     },
   },
@@ -37,9 +43,6 @@ const dashboardSlice = createSlice({
       state.tasks.assignees = assignees
       state.tasks.assigneesIsMe = assigneesIsMe
     },
-    onAttributesOpenChanged: (state, { payload }) => {
-      state.tasks.attributesOpen = payload
-    },
     onCollapsedColumnsChanged: (state, { payload }) => {
       state.tasks.collapsedColumns = payload
     },
@@ -55,7 +58,7 @@ const dashboardSlice = createSlice({
       state.tasks.filter = ''
       state.tasks.assignees = []
       state.tasks.assigneesIsMe = true
-      state.tasks.attributesOpen = true
+      state.details.filter = 'activity'
       state.tasks.collapsedColumns = []
     },
   },
@@ -68,7 +71,6 @@ export const {
   onTasksGroupByChanged,
   onTasksFilterChanged,
   onAssigneesChanged,
-  onAttributesOpenChanged,
   onCollapsedColumnsChanged,
   onPrefetchIds,
   onClearDashboard,
@@ -87,6 +89,5 @@ export const dashboardLocalItems = {
     { key: 'dashboard-tasks-assigneesIsMe', payload: 'assigneesIsMe' },
   ],
   'dashboard/onAssigneeIsMeChanged': [{ key: 'dashboard-tasks-assigneesIsMe' }],
-  'dashboard/onAttributesOpenChanged': [{ key: 'dashboard-tasks-attributesOpen' }],
   'dashboard/onCollapsedColumnsChanged': [{ key: 'dashboard-tasks-collapsedColumns' }],
 }

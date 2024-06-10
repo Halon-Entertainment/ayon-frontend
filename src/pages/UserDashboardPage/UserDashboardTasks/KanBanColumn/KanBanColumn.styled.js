@@ -122,7 +122,7 @@ export const Header = styled.header`
     inset: 0;
     justify-content: flex-end;
     padding: 0 6px;
-    gap: 4px;
+    gap: var(--base-gap-small);
 
     button {
       /* toolbar is only revealed on hover */
@@ -154,6 +154,12 @@ export const Header = styled.header`
   }
 `
 
+export const GroupHeader = styled.span`
+  overflow: hidden;
+  word-break: break-all;
+  padding: 0 4px;
+`
+
 export const MenuButton = styled(Button)`
   padding: 4px;
   border-radius: var(--border-radius-xl);
@@ -170,7 +176,7 @@ export const Items = styled(PerfectScrollbar)`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-gap-large);
   width: 100%;
 
   padding-bottom: ${({ $isScrolling }) => ($isScrolling ? '30px' : '16px')};
@@ -224,7 +230,7 @@ export const Collapsed = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--base-gap-medium);
+  gap: var(--base-gap-large);
   position: relative;
 
   border-top: solid 1px ${({ $color }) => $color};

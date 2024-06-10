@@ -7,11 +7,12 @@ import { useMemo } from 'react'
 import styled from 'styled-components'
 import addRemoveMembers from './addRemoveMembers'
 import useCreateContext from '/src/hooks/useCreateContext'
+import UsersListTeamsSmall from './UsersListTeamsSmall'
 
 const StyledProfileRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-gap-large);
   overflow: hidden;
 `
 
@@ -54,6 +55,7 @@ const UserListTeams = ({
   onShowAllUsers,
   teams = [],
   onUpdateTeams,
+  isFullSize = true
 }) => {
   // Selection
   const selection = useMemo(
@@ -179,9 +181,17 @@ const UserListTeams = ({
       ),
     )
   }
-
-  // Render
-
+  
+  if (!isFullSize) return (
+    <UsersListTeamsSmall
+      handleContext={handleContext}
+      userList={userList}
+      isLoading={isLoading}
+      onSelectionChange={onSelectionChange}
+      onContextSelectionChange={onContextSelectionChange}
+      selection={selection}
+    />
+  )
   return (
     <Section
       style={{

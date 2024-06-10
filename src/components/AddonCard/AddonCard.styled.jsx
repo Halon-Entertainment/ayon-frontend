@@ -8,7 +8,7 @@ export const AddonCard = styled.button`
   display: flex;
   padding: 8px;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-gap-large);
   align-self: stretch;
   cursor: pointer;
   user-select: none;
@@ -70,5 +70,9 @@ export const AddonCard = styled.button`
     margin-left: auto;
     background-color: unset;
     color: var(--md-sys-color-on-error-container);
+  }
+
+  .version {
+    margin-left: auto;
   }
 `

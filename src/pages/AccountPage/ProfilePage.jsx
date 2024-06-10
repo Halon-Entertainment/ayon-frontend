@@ -7,21 +7,23 @@ import {
   LockedInput,
   SaveButton,
   InputText,
+  getShimmerStyles,
 } from '@ynput/ayon-react-components'
 import { useUpdateUserMutation } from '../../services/user/updateUser'
-import UserDetailsHeader from '../../components/User/UserDetailsHeader'
-import styled from 'styled-components'
+import Avatar from '../../components/Avatar/Avatar'
+import styled, { css } from 'styled-components'
 import UserAttribForm from '../SettingsPage/UsersSettings/UserAttribForm'
 import SetPasswordDialog from '../SettingsPage/UsersSettings/SetPasswordDialog'
 import ayonClient from '../../ayon'
-import { onProfileUpdate } from '../../features/user'
+import Type from '/src/theme/typography.module.css'
+import { updateUserAttribs } from '../../features/user'
 import { useDispatch } from 'react-redux'
 
 const FormsStyled = styled.section`
   flex: 1;
   overflow-x: clip;
   overflow-y: auto;
-  gap: 4px;
+  gap: var(--base-gap-small);
   display: flex;
   flex-direction: column;
   max-width: 600px;
@@ -36,6 +38,23 @@ export const PanelButtonsStyled = styled(Panel)`
 
   & > * {
     flex: 1;
+  }
+`
+export const AvatarName = styled.span`
+  display: flex;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 16px 8px 16px;
+  > span {
+    position: relative;
+    ${({ $hasData }) =>
+      !$hasData &&
+      css`
+        color: transparent;
+        border-radius: var(--border-radius-m);
+        ${getShimmerStyles()}
+      `}
   }
 `
 
@@ -58,6 +77,7 @@ const ProfilePage = ({ user = {}, isLoading }) => {
   const [initData, setInitData] = useState(initialFormData)
   const [formData, setFormData] = useState(initialFormData)
   const [changesMade, setChangesMade] = useState(false)
+  const userName = user?.attrib?.fullName || user?.name
 
   // once user data is loaded, set form data
   useEffect(() => {
@@ -113,7 +133,7 @@ const ProfilePage = ({ user = {}, isLoading }) => {
       toast.success('Profile updated')
 
       // update redux state with new data
-      dispatch(onProfileUpdate(formData))
+      dispatch(updateUserAttribs(formData))
       // reset form
       setInitData(formData)
       setChangesMade(false)
@@ -127,12 +147,21 @@ const ProfilePage = ({ user = {}, isLoading }) => {
   return (
     <main>
       <Section style={{ paddingTop: 16 }}>
-        <UserDetailsHeader users={[user]} style={{ maxWidth: 600 }} />
         <FormsStyled>
-          <Panel>
+          <Avatar user={user} />
+          <AvatarName $hasData={!!userName}>
+            <span className={Type.headlineMedium}>{userName ? userName : 'User FullName'}</span>
+          </AvatarName>
+          <Panel style={{ background: 'none' }}>
             <FormRow label="Username" key="Username">
               <InputText value={name} disabled />
             </FormRow>
+            <UserAttribForm
+              formData={formData}
+              setFormData={setFormData}
+              attributes={attributes}
+              showAvatarUrl={false}
+            />
             <FormRow label="Password" key="Password">
               <LockedInput
                 label="Password"
@@ -141,7 +170,6 @@ const ProfilePage = ({ user = {}, isLoading }) => {
                 onEdit={() => setShowSetPassword(true)}
               />
             </FormRow>
-            <UserAttribForm formData={formData} setFormData={setFormData} attributes={attributes} />
             <SaveButton
               onClick={onSave}
               label="Save profile"

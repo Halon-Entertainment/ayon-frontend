@@ -2,19 +2,36 @@
 
 import { useState, useMemo } from 'react'
 import { toast } from 'react-toastify'
+import styled from 'styled-components'
 
-import { ScrollPanel, Button, Spacer, Toolbar } from '@ynput/ayon-react-components'
+import { ScrollPanel, Button, Spacer, Toolbar, Dialog } from '@ynput/ayon-react-components'
 
 import BundleDropdown from '/src/containers/BundleDropdown'
 import ProjectDropdown from '/src/containers/ProjectDropdown'
 import VariantSelector from '/src/containers/AddonSettings/VariantSelector'
 
-import { Dialog } from 'primereact/dialog'
 import CopySettingsNode from './CopySettingsNode'
 
 import { setValueByPath } from '../AddonSettings/utils'
-import { useGetBundleListQuery } from '/src/services/bundles'
+import { useGetBundleListQuery } from '/src/services/bundles/getBundles'
 import { cloneDeep } from 'lodash'
+
+
+const StateShade = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #252a31;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #666;
+`
+
 
 const CopySettingsDialog = ({
   selectedAddons,
@@ -33,17 +50,21 @@ const CopySettingsDialog = ({
 
   const [sourceBundle, setSourceBundle] = useState(null)
   const [sourceVariant, setSourceVariant] = useState(null)
-  const [sourceProjectName, setSourceProjectName] = useState(null)
+  const [sourceProjectName, setSourceProjectName] = useState(projectName)
+  const [nodeState, setNodeState] = useState({})
 
   const {
     data: bundlesData,
     isLoading: bundlesLoading,
     isError: bundlesError,
-  } = useGetBundleListQuery({}, { skip: !pickByBundle })
+  } = useGetBundleListQuery({})
 
   const sourceVersions = useMemo(() => {
-    if (bundlesLoading || bundlesError) return {}
     if (!sourceBundle) return {}
+
+    if (bundlesLoading || bundlesError) return {}
+
+    if (!bundlesData) return {}
 
     const sb = bundlesData.find((i) => i.name === sourceBundle)
     return sb?.addons || {}
@@ -58,7 +79,7 @@ const CopySettingsDialog = ({
     for (const nodeKey in nodes) {
       const node = nodes[nodeKey]
       if (!(node.available && node.enabled)) continue
-      console.log('Migrating node', node.addonName, node.addonVersion)
+      //console.log('Migrating node', node.addonName, node.addonVersion)
 
       // Define the target addon
       const siteId = '_'
@@ -110,6 +131,18 @@ const CopySettingsDialog = ({
     return false
   }, [nodes])
 
+
+  const overalState = useMemo(() => {
+    // get all values from nodeState and return 'loading' if any of them is 'loading'
+    let somethingLoaded = false
+    for (const key in nodeState) {
+      if (nodeState[key] === 'loading') return 'loading'
+      if (nodeState[key] === 'loaded') somethingLoaded = true
+    }
+
+    return somethingLoaded ? 'loaded' : 'empty'
+  }, [nodeState])
+
   //
   // RENDER
   //
@@ -127,27 +160,51 @@ const CopySettingsDialog = ({
     </div>
   )
 
-  const toolbar = pickByBundle && (
-    <Toolbar>
-      Copy settings from
-      <BundleDropdown
-        style={{ flexGrow: 1 }}
-        bundleName={sourceBundle}
-        setBundleName={setSourceBundle}
-      />
-      <VariantSelector variant={sourceVariant} setVariant={setSourceVariant} />
-      {projectName && (
-        <ProjectDropdown projectName={sourceProjectName} setProjectName={setSourceProjectName} />
+  const dropSize = 270
+  const dropStyle = { maxWidth: dropSize, minWidth: dropSize, marginRight: 8 }
+
+  const toolbar = (
+    <Toolbar style={{marginBottom: 15}}>
+      {pickByBundle && (
+        <>
+          Source bundle:
+          <BundleDropdown
+            style={dropStyle}
+            bundleName={sourceBundle}
+            setBundleName={setSourceBundle}
+            setVariant={setSourceVariant}
+          />
+        </>
       )}
+      Source variant:
+      <VariantSelector
+        variant={sourceVariant}
+        style={dropStyle}
+        setVariant={(val) => {
+          setSourceVariant(val)
+        }}
+      />
       <Spacer />
+      {projectName && (
+        <>
+          Source project:
+          <ProjectDropdown
+            projectName={sourceProjectName}
+            setProjectName={setSourceProjectName}
+            style={{ ...dropStyle, marginRight: 0 }}
+          />
+        </>
+      )}
     </Toolbar>
   )
 
   return (
     <Dialog
-      visible
-      onHide={onClose}
-      style={{ width: '80vw', height: '80vh' }}
+      isOpen
+      onClose={onClose}
+      variant="dialog"
+      size="full"
+      style={{ width: '80vw', height: '80vh', zIndex: 999 }}
       header={`Copy ${variant} settings ${pickByBundle ? 'by bundle' : ''}`}
       footer={footer}
     >
@@ -163,7 +220,12 @@ const CopySettingsDialog = ({
         {toolbar}
         <ScrollPanel style={{ flexGrow: 1, background: 'transparent' }}>
           <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}
+            style={{ 
+              display: (overalState==='loading') ? 'none' : 'flex',
+              flexDirection: 'column', 
+              gap: '8px', 
+              marginBottom: '8px' 
+            }}
           >
             {selectedAddons
               .filter((addon) => !pickByBundle || sourceVersions[addon.name])
@@ -181,13 +243,22 @@ const CopySettingsDialog = ({
                       [addon.name]: data,
                     }))
                   }}
+                  setNodeState={(state) => {setNodeState(o => ({...o, [addon.name]: state}))}}
                   forcedSourceVariant={sourceVariant}
                   forcedSourceVersion={pickByBundle ? sourceVersions[addon.name] : null}
-                  forcedSourceProjectName={pickByBundle ? sourceProjectName : null}
+                  forcedSourceProjectName={sourceProjectName || null}
                 />
               ))}
           </div>
+
+        {overalState === 'loading' && (
+          <StateShade>
+            LOADING...
+          </StateShade>
+        )}
+
         </ScrollPanel>
+
       </div>
     </Dialog>
   )

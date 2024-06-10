@@ -86,8 +86,8 @@ const BundleForm = ({
               <h2 style={{ margin: 0, marginRight: 32 }}>{formData?.installerVersion || 'NONE'}</h2>
               <>
                 {!!installerPlatforms?.length &&
-                  installerPlatforms.map((platform) => (
-                    <Styled.PlatformTag key={platform} $platform={platform}>
+                  installerPlatforms.map((platform, i) => (
+                    <Styled.PlatformTag key={platform + '-' + i} $platform={platform}>
                       {upperFirst(platform === 'darwin' ? 'macOS' : platform)}
                     </Styled.PlatformTag>
                   ))}
@@ -154,7 +154,9 @@ const BundleForm = ({
             />
           </section>
         </section>
-        <Section style={{ overflow: 'hidden', alignItems: 'flex-start', flex: 'none' }}>
+        <Section
+          style={{ overflow: 'hidden', alignItems: 'flex-start', flex: '0 1 auto', height: '100%' }}
+        >
           {children}
         </Section>
       </StyledColumns>

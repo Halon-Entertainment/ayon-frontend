@@ -1,30 +1,5 @@
 import { ayonApi } from '../ayon'
 
-export const patchProductsListWithVersions = (
-  { projectName, folderIds },
-  { versions },
-  { dispatch },
-) => {
-  // patch into productsList cache
-  return dispatch(
-    ayonApi.util.updateQueryData('getProductList', { projectName, folderIds }, (draft) => {
-      console.log('patching versions!:', versions)
-      versions.forEach((version) => {
-        // find product in product list
-        const productIndex = draft.findIndex((product) => product.id === version.productId)
-
-        if (productIndex === -1) return
-
-        // merge version data into product
-        draft[productIndex] = {
-          ...draft[productIndex],
-          ...version,
-        }
-      })
-    }),
-  )
-}
-
 const parseProductFps = (product) => {
   const folderFps = product.folder.attrib.fps || ''
   if (!product) return folderFps
@@ -89,6 +64,7 @@ const parseProductData = (data) => {
       versionAuthor: vers ? vers.author : null,
       taskId: vers && vers.taskId ? vers.taskId : null,
       taskName: vers && vers.task ? vers.task.name : null,
+      taskType: vers && vers.task ? vers.task.taskType : null,
       frames: parseProductFrames(product),
       createdAt: vers ? vers.createdAt : product.createdAt,
     }
@@ -127,6 +103,7 @@ fragment ProductVersionFragment on VersionNode {
   taskId
   task {
     name
+    taskType
   }
   status
   attrib {

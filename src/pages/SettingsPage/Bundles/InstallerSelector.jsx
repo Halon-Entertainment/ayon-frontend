@@ -5,7 +5,7 @@ import styled, { css } from 'styled-components'
 
 const DefaultItemStyled = styled.span`
   display: flex;
-  gap: 8px;
+  gap: var(--base-gap-large);
   align-items: center;
   height: 30px;
   padding: 0 8px;
@@ -35,8 +35,8 @@ const VersionAndPlatformTemplate = ({ version = [], platforms = [] }) => {
   return (
     <DefaultValueTemplate
       value={version}
-      childrenCustom={platforms?.map((platform) => (
-        <Styled.PlatformTag key={platform} $platform={platform}>
+      childrenCustom={platforms?.map((platform, i) => (
+        <Styled.PlatformTag key={platform + '-' + i} $platform={platform}>
           {platform === 'darwin' ? 'macOS' : platform}
         </Styled.PlatformTag>
       ))}
@@ -61,8 +61,8 @@ const InstallerSelector = ({ value = [], options, onChange, disabled }) => {
       itemTemplate={(option, isActive) => (
         <DefaultItemStyled $isSelected={isActive}>
           <span>{option.version}</span>
-          {option?.platforms?.map((platform) => (
-            <Styled.PlatformTag key={platform} $platform={platform}>
+          {option?.platforms?.map((platform, i) => (
+            <Styled.PlatformTag key={platform + '-' + i} $platform={platform}>
               {platform === 'darwin' ? 'macOS' : platform}
             </Styled.PlatformTag>
           ))}

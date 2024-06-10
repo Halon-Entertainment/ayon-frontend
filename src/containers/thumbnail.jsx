@@ -4,6 +4,7 @@ import getShimmerStyles from '../styles/getShimmerStyles'
 import { Icon } from '@ynput/ayon-react-components'
 import ThumbnailUploader from '../components/ThumbnailUploader/ThumbnailUploader'
 import { createPortal } from 'react-dom'
+import { classNames } from 'primereact/utils'
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -37,7 +38,18 @@ const ThumbnailStyled = styled.div`
     animation: ${fadeIn} 0.1s 0.3s forwards;
   }
 
-  ${({ $shimmer }) => $shimmer && getShimmerStyles()}
+  &.shimmer {
+    .icon {
+      opacity: 0;
+      animation: none;
+    }
+
+    border: none;
+    border-color: transparent;
+    background-color: unset;
+
+    ${getShimmerStyles()}
+  }
 `
 
 const ImageStyled = styled.img`
@@ -89,6 +101,7 @@ const Thumbnail = ({
     const handleDragOver = (e) => {
       e.preventDefault()
       e.stopPropagation()
+
       setShowPortal(true)
     }
     const handleDragLeave = (e) => {
@@ -120,8 +133,7 @@ const Thumbnail = ({
   return (
     <ThumbnailStyled
       style={style}
-      className={className + ' thumbnail'}
-      $shimmer={isLoading && shimmer}
+      className={classNames(className, 'thumbnail', { shimmer: isLoading && shimmer })}
       {...props}
     >
       {(!isLoading || !thumbLoaded) && !disabled && <Icon icon={icon || 'image'} />}
@@ -134,7 +146,7 @@ const Thumbnail = ({
           onLoad={() => setThumbLoaded(true)}
         />
       )}
-      {entityType && entityId && !isStacked && projectName && !disableUpload && (
+      {entityType && entityId && !isStacked && projectName && !disableUpload && !isLoading && (
         <>
           <ThumbnailUploader {...thumbnailProps} isButton={isUploadButton} />
           {portalEl &&
@@ -153,6 +165,7 @@ const Thumbnail = ({
                   }, 800)
                 }}
                 onUploading={() => setIsUploading(true)}
+                onCancel={() => setShowPortal(false)}
               />,
               portalEl,
             )}

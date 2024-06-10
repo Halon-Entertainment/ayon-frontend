@@ -1,29 +1,22 @@
 import { useState, useMemo, useEffect } from 'react'
 import BundleList from './BundleList'
 import BundleDetail from './BundleDetail'
-
 import { Button, InputSwitch, Section } from '@ynput/ayon-react-components'
 import * as Styled from './Bundles.styled'
-import {
-  useDeleteBundleMutation,
-  useGetBundleListQuery,
-  useUpdateBundleMutation,
-} from '/src/services/bundles'
+import { useGetBundleListQuery } from '/src/services/bundles/getBundles'
+import { useUpdateBundleMutation } from '/src/services/bundles/updateBundles'
 import getNewBundleName from './getNewBundleName'
 import NewBundle from './NewBundle'
 import { useGetInstallerListQuery } from '/src/services/installers'
 import { useGetAddonListQuery } from '../../../services/addons/getAddons'
 import { upperFirst } from 'lodash'
 import { toast } from 'react-toastify'
-import { Dialog } from 'primereact/dialog'
-import AddonUpload from '../AddonInstall/AddonUpload'
+import AddonDialog from '../../../components/AddonDialog/AddonDialog'
 import { useGetAddonSettingsQuery } from '/src/services/addonSettings'
 import getLatestSemver from './getLatestSemver'
 import { ayonApi } from '/src/services/ayon'
 import { useDispatch, useSelector } from 'react-redux'
 import useLocalStorage from '/src/hooks/useLocalStorage'
-
-import confirmDelete from '/src/helpers/confirmDelete'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
 import { useSearchParams } from 'react-router-dom'
 import Shortcuts from '/src/containers/Shortcuts'
@@ -32,11 +25,8 @@ const Bundles = () => {
   const userName = useSelector((state) => state.user.name)
   const developerMode = useSelector((state) => state.user.attrib.developerMode)
   const dispatch = useDispatch()
-  // addon install dialog
+  // addon upload dialog
   const [uploadOpen, setUploadOpen] = useState(false)
-
-  // keep track is an addon was installed
-  const [restartRequired, setRestartRequired] = useState(false)
 
   // table selection
   const [selectedBundles, setSelectedBundles] = useState([])
@@ -124,7 +114,6 @@ const Bundles = () => {
   }, [searchParams, isLoading, bundleList])
 
   // REDUX MUTATIONS
-  const [deleteBundle] = useDeleteBundleMutation()
   const [updateBundle] = useUpdateBundleMutation()
 
   // get latest core version
@@ -223,9 +212,18 @@ const Bundles = () => {
       newName = getVersionedName(newName)
     }
 
+    const duplicatedAddons = { ...bundle.addons }
+    const installedAddonNames = new Set(addons.map((a) => a.name))
+    // ensure that all addons are installed and delete the ones that are not
+    for (const addonName in duplicatedAddons) {
+      if (!installedAddonNames.has(addonName)) {
+        delete duplicatedAddons[addonName]
+      }
+    }
+
     setNewBundleOpen({
       name: newName,
-      addons: bundle.addons,
+      addons: duplicatedAddons,
       installerVersion: bundle.installerVersion,
       dependencyPackages: bundle.dependencyPackages,
       isArchived: false,
@@ -276,28 +274,10 @@ const Bundles = () => {
     }
   }
 
-  const handleDeleteBundle = async () =>
-    confirmDelete({
-      label: `${selectedBundles.length} bundles`,
-      accept: async () => {
-        setSelectedBundles([])
-        for (const name of selectedBundles) {
-          await deleteBundle({ name }).unwrap()
-        }
-      },
-    })
-
-  const handleAddonInstallFinish = () => {
-    setUploadOpen(false)
-    if (restartRequired) {
-      setRestartRequired(false)
-    }
-  }
-
   let uploadHeader = ''
   switch (uploadOpen) {
     case 'addon':
-      uploadHeader = 'Install Addons'
+      uploadHeader = 'Upload Addons'
       break
     case 'installer':
       uploadHeader = 'Upload Launcher'
@@ -353,21 +333,7 @@ const Bundles = () => {
         shortcuts={shortcuts}
         deps={[selectedBundles, newBundleOpen, prodBundle, stageBundle]}
       />
-      <Dialog
-        visible={uploadOpen}
-        style={{ width: 400, height: 400, overflow: 'hidden' }}
-        header={uploadHeader}
-        onHide={handleAddonInstallFinish}
-        appendTo={document.getElementById('root')}
-      >
-        {uploadOpen && (
-          <AddonUpload
-            onClose={handleAddonInstallFinish}
-            type={uploadOpen}
-            onInstall={(t) => t === 'addon' && setRestartRequired(true)}
-          />
-        )}
-      </Dialog>
+      <AddonDialog uploadOpen={uploadOpen} setUploadOpen={setUploadOpen} uploadHeader={uploadHeader} />
       <main style={{ overflow: 'hidden' }}>
         <Splitter style={{ width: '100%' }} stateStorage="local" stateKey="bundles-splitter">
           <SplitterPanel style={{ minWidth: 200, width: 400, maxWidth: 800, zIndex: 10 }} size={30}>
@@ -382,12 +348,12 @@ const Bundles = () => {
                   <span>Add Bundle</span>
                 </Button>
                 <Button
-                  icon="input_circle"
+                  icon="upload"
                   onClick={() => setUploadOpen('addon')}
-                  data-tooltip="Install addon zip files"
+                  data-tooltip="Upload addon zip files"
                   data-shortcut="A"
                 >
-                  <span className="large">Install addons</span>
+                  <span className="large">Upload addons</span>
                   <span className="small">Addons</span>
                 </Button>
                 <Button
@@ -423,7 +389,6 @@ const Bundles = () => {
                 bundleList={bundleList}
                 isLoading={isLoading}
                 onDuplicate={handleDuplicateBundle}
-                onDelete={handleDeleteBundle}
                 toggleBundleStatus={toggleBundleStatus}
                 errorMessage={!isFetching && isError && error?.data?.traceback}
                 developerMode={developerMode}

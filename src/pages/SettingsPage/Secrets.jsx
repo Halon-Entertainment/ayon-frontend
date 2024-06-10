@@ -5,7 +5,14 @@ import {
   useDeleteSecretMutation,
 } from '/src/services/secrets'
 import styled from 'styled-components'
-import { InputText, InputPassword, Button, ScrollPanel, Section, SaveButton } from '@ynput/ayon-react-components'
+import {
+  InputText,
+  InputPassword,
+  Button,
+  ScrollPanel,
+  Section,
+  SaveButton,
+} from '@ynput/ayon-react-components'
 import { toast } from 'react-toastify'
 import confirmDelete from '/src/helpers/confirmDelete'
 import copyToClipboard from '/src/helpers/copyToClipboard'
@@ -24,7 +31,7 @@ const StyledSecretItem = styled.div`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-gap-large);
   width: 600px;
 
   input:nth-child(2) {

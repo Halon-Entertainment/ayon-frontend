@@ -2,6 +2,7 @@
 // gets addonsList
 // get server info
 import React, { createContext, useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-toastify'
 import { useGetYnputConnectionsQuery } from '/src/services/ynputConnect'
 import {
   useAbortOnBoardingMutation,
@@ -12,7 +13,8 @@ import {
 } from '/src/services/onBoarding/onBoarding'
 import { useGetReleasesQuery } from '/src/services/getRelease'
 import useLocalStorage from '/src/hooks/useLocalStorage'
-import { useCreateBundleMutation, useLazyGetBundleListQuery } from '/src/services/bundles'
+import { useLazyGetBundleListQuery } from '/src/services/bundles/getBundles'
+import { useCreateBundleMutation } from '/src/services/bundles/updateBundles'
 import getNewBundleName from '../../SettingsPage/Bundles/getNewBundleName'
 
 const userFormFields = [
@@ -116,9 +118,9 @@ export const OnBoardingProvider = ({ children, initStep, onFinish }) => {
   const [selectedAddons, setSelectedAddons] = useState([])
 
   // get selected release data
-  const { data: release = {} } = useGetReleaseQuery(
+  const { data: release = {}, isFetching: isLoadingAddons } = useGetReleaseQuery(
     { name: selectedPreset },
-    { skip: !selectedPreset || stepIndex !== 7 },
+    { skip: !selectedPreset || stepIndex < 5 },
   )
 
   // // once releases are loaded, set selectedPreset to the first one and pre-cache each release
@@ -227,14 +229,14 @@ export const OnBoardingProvider = ({ children, initStep, onFinish }) => {
         // first create the bundle from the release
         const bundle = createBundleFromRelease(release, selectedAddons, bundleList)
 
-        await createBundle({ data: bundle }).unwrap()
+        await createBundle({ data: bundle, force: true }).unwrap()
       }
       await abortOnboarding().unwrap()
-
-      onFinish(restart)
     } catch (error) {
       console.error(error)
+      toast.error('Please create your production bundle manually after restarting the server.')
     }
+    onFinish(restart)
   }
 
   const contextValue = {
@@ -263,6 +265,7 @@ export const OnBoardingProvider = ({ children, initStep, onFinish }) => {
     setIsConnecting,
     isConnecting,
     isLoadingRelease,
+    isLoadingAddons,
   }
 
   return <OnBoardingContext.Provider value={contextValue}>{children}</OnBoardingContext.Provider>

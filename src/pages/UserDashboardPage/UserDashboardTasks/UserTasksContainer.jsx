@@ -8,17 +8,23 @@ import UserDashboardKanBan from './UserDashboardKanBan'
 import { useEffect, useMemo } from 'react'
 import { onAssigneesChanged } from '/src/features/dashboard'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
-import UserDashboardDetails from './UserDashboardDetails/UserDashboardDetails'
+import DetailsPanel from '../../../containers/DetailsPanel/DetailsPanel'
 import { getIntersectionFields, getMergedFields } from '../util'
 import { Section } from '@ynput/ayon-react-components'
 import { setUri } from '/src/features/context'
+import DetailsPanelSlideOut from '../../../containers/DetailsPanel/DetailsPanelSlideOut/DetailsPanelSlideOut'
 
-const getThumbnailUrl = (taskId, thumbnailId, updatedAt, projectName) => {
-  if (!projectName || (!thumbnailId && !taskId)) return null
+export const getThumbnailUrl = ({ entityId, entityType, thumbnailId, updatedAt, projectName }) => {
+  if (!projectName || (!thumbnailId && !entityId)) return null
 
-  return thumbnailId
+  // fallback on arbitrary thumbnailId if entityId is not available
+  // this should never happen, but just in case
+  // only admins and managers can see the second endpoint though
+  const thumbnailUrl = thumbnailId
     ? `/api/projects/${projectName}/thumbnails/${thumbnailId}?updatedAt=${updatedAt}`
-    : `/api/projects/${projectName}/tasks/${taskId}/thumbnail?updatedAt=${updatedAt}`
+    : `/api/projects/${projectName}/${entityType}s/${entityId}/thumbnail?updatedAt=${updatedAt}`
+
+  return thumbnailUrl
 }
 
 const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
@@ -80,7 +86,13 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
       ? task.updatedAt
       : task.latestVersionUpdatedAt ?? task.updatedAt
 
-    const thumbnailUrl = getThumbnailUrl(task.id, thumbnailId, updatedAt, task.projectName)
+    const thumbnailUrl = getThumbnailUrl({
+      entityId: task.id,
+      entityType: 'task',
+      thumbnailId,
+      updatedAt,
+      projectName: task.projectName,
+    })
 
     const updatedTask = { ...task, thumbnailUrl }
 
@@ -117,17 +129,23 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
     [projectsInfo, isLoadingInfo],
   )
 
+  const statusesIntersection = useMemo(
+    () => getIntersectionFields(projectsInfo, 'statuses', selectedTasksProjects),
+    [projectsInfo, selectedTasksProjects],
+  )
+
   const disabledStatuses = useMemo(
     () =>
       statusesOptions
-        .filter(
-          (s) =>
-            !getIntersectionFields(projectsInfo, 'statuses', selectedTasksProjects).some(
-              (s2) => s2.name === s.name,
-            ),
-        )
+        .filter((s) => !statusesIntersection.some((s2) => s2.name === s.name))
         .map((s) => s.name),
     [projectsInfo, selectedTasksProjects, statusesOptions],
+  )
+
+  // find the intersection of all the tags of the projects for the selected tasks
+  const tagsOptions = useMemo(
+    () => getIntersectionFields(projectsInfo, 'tags', selectedTasksProjects),
+    [projectsInfo, selectedTasksProjects],
   )
 
   const { data: projectUsers = [] } = useGetKanBanUsersQuery(
@@ -152,7 +170,7 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
   }, [selectedTasksProjects, projectUsers])
 
   const isLoadingAll = isLoadingInfo || isLoadingTasks
-  const detailsMinWidth = 400
+  const detailsMinWidth = 533
   const detailsMaxWidth = '40vw'
   const detailsMaxMaxWidth = 700
 
@@ -206,15 +224,21 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
             minWidth: detailsMinWidth,
           }}
         >
-          <UserDashboardDetails
-            tasks={tasksWithIcons}
+          <DetailsPanel
+            entitiesData={selectedTasksData}
             statusesOptions={statusesOptions}
             disabledStatuses={disabledStatuses}
+            tagsOptions={tagsOptions}
             projectUsers={projectUsers}
             activeProjectUsers={activeProjectUsers}
             disabledProjectUsers={disabledProjectUsers}
             selectedTasksProjects={selectedTasksProjects}
+            projectsInfo={projectsInfo}
+            projectNames={selectedTasksProjects}
+            entityType="task"
+            scope="dashboard"
           />
+          <DetailsPanelSlideOut projectsInfo={projectsInfo} scope="dashboard" />
         </SplitterPanel>
       ) : (
         <SplitterPanel style={{ maxWidth: 0 }}></SplitterPanel>

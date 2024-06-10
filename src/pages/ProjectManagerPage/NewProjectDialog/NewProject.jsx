@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Dialog } from 'primereact/dialog'
+import { Dialog } from '@ynput/ayon-react-components'
 import { toast } from 'react-toastify'
 
 import { Spacer, InputText, Toolbar, SaveButton, InputSwitch } from '@ynput/ayon-react-components'
@@ -145,16 +145,28 @@ const NewProjectDialog = ({ onHide }) => {
     </Toolbar>
   )
 
+  const handleKeyDown = (e) => {
+    e?.stopPropagation()
+    const enter = e.key === 'Enter'
+    const ctrlMeta = e.ctrlKey || e.metakey
+    const shift = e.shiftKey
+    const esc = e.key === 'Escape'
+    const isSubmitEnabeld = !(nameValidationError || codeValidationError)
+
+    if (isSubmitEnabeld && enter && ctrlMeta) handleSubmit()
+    if (isSubmitEnabeld && enter && shift) handleSubmit()
+    if (esc) onHide()
+  }
+
   return (
     <Dialog
       header="Create a new project"
       footer={footer}
-      visible="true"
-      onHide={onHide}
-      style={{
-        width: '50vw',
-        height: '80%',
-      }}
+      isOpen={true}
+      onClose={onHide}
+      size="full"
+      style={{ height: '80%', maxHeight: 1000, zIndex: 999, maxWidth: 2000 }}
+      onKeyDown={handleKeyDown}
     >
       <div
         style={{

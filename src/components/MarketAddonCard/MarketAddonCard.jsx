@@ -19,27 +19,31 @@ const MarketAddonCard = ({
   isPlaceholder,
   isWaiting, // waiting to be installed/updated by update all
   isInstalling,
+  isFailed,
   isFinished,
   onInstall,
   ...props
 }) => {
-  let state = 'install'
-  if (isInstalled && !isOutdated) state = 'installed'
+  let state = 'download'
+  if (isInstalled && !isOutdated) state = 'downloaded'
   if (isInstalled && isOutdated) state = 'update'
   if (isWaiting) state = 'pending'
-  if (isInstalling) state = isInstalled && isOutdated ? 'updating' : 'installing'
+  if (isInstalling) state = isInstalled && isOutdated ? 'updating' : 'downloading'
+  if (isFailed) state = 'failed'
   if (isFinished) state = 'finished'
 
   let stateIcon = null
   if (isInstalling) stateIcon = 'sync'
+  if (isFailed) stateIcon = 'error'
   if (isFinished) stateIcon = 'check_circle'
 
   let stateVariant = 'light'
   if (state === 'install') stateVariant = 'surface'
+  if (state === 'failed') stateVariant = 'danger'
   if (state === 'update') stateVariant = 'filled'
 
   const handleActionClick = () => {
-    if (['install', 'update'].includes(state)) {
+    if (['download', 'update'].includes(state)) {
       onInstall(name, latestVersion)
     }
   }

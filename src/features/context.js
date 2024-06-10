@@ -6,6 +6,11 @@ const initialState = {
   expandedFolders: {},
   expandedProducts: {},
   expandedRepresentations: {},
+  filters: {
+    browser: {
+      productTaskTypes: [],
+    },
+  },
   focused: {
     type: null,
     folders: [],
@@ -27,6 +32,13 @@ const initialState = {
   uriChanged: 0,
   uploadProgress: 0, // percentage 0 - 100
   menuOpen: false,
+  previewFile: {
+    id: null,
+    name: null,
+    mime: null,
+    size: null,
+    projectName: null,
+  },
 }
 
 // all the keys that are stored in local storage
@@ -45,6 +57,7 @@ const localStorageKeys = [
   'focused.editor',
   'selectedVersions',
   'uri',
+  'filters.browser.productTaskTypes',
 ]
 
 const initialStateWithLocalStorage = cloneDeep(initialState)
@@ -271,6 +284,11 @@ const reducers = {
       payload: 'type',
     },
   },
+  updateBrowserFilters: {
+    'filters.browser.productTaskTypes': {
+      payload: 'productTaskTypes',
+    },
+  },
 }
 
 // we use this function to update the state with the reducer values
@@ -366,6 +384,9 @@ const contextSlice = createSlice({
     onUriNavigate: (state, action) => {
       updateStateWithReducer(reducers.onUriNavigate, state, action)
     },
+    updateBrowserFilters: (state, action) => {
+      updateStateWithReducer(reducers.updateBrowserFilters, state, action)
+    },
     onFocusChanged: (state, action) => {
       state.focused.lastFocused = action.payload
     },
@@ -416,6 +437,14 @@ const contextSlice = createSlice({
       // else set payload
       else state.menuOpen = action.payload
     },
+    onCommentImageOpen: (state, action) => {
+      // set the preview file
+      state.previewFile = action.payload
+    },
+    onFilePreviewClose: (state) => {
+      // clear the preview file
+      state.previewFile = initialState.previewFile
+    },
   }, // reducers
 })
 
@@ -447,6 +476,9 @@ export const {
   setMenuOpen,
   toggleMenuOpen,
   onUriNavigate,
+  updateBrowserFilters,
+  onCommentImageOpen,
+  onFilePreviewClose,
 } = contextSlice.actions
 
 export default contextSlice.reducer
@@ -490,7 +522,5 @@ Object.entries(reducers).forEach(([reducerKey, reducerStates]) => {
   // add the middleware to the local storage items
   Object.assign(contextLocalItems, middleware)
 })
-
-console.log(contextLocalItems)
 
 export { contextLocalItems }

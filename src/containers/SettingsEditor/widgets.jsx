@@ -15,7 +15,8 @@ import { isEqual } from 'lodash'
 const updateChangedKeys = (props, changed, path) => {
   if (!props.formContext) return // WARN! (but shouldn't happen)
   if (!path?.length) return // WARN!
-  props.formContext.onSetChangedKeys([{ path, isChanged: changed }])
+  if (!changed) return
+  props.formContext.onSetChangedKeys([{ path, isChanged: true }])
 }
 
 const equiv = (a, b) => {
@@ -303,7 +304,7 @@ const TextWidget = (props) => {
     } else {
       opts.step = 1
     }
-    opts.value = value || ""
+    opts.value = value || ''
     if (props.schema.minimum !== undefined) opts.min = props.schema.minimum
     if (props.schema.maximum !== undefined) opts.max = props.schema.maximum
     if (props.schema.exclusiveMinimum !== undefined)

@@ -13,14 +13,14 @@ const FormArrayField = styled.div`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--base-gap-large);
 `
 
 const FormArrayFieldItem = styled.div`
   flex-grow: 1;
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: var(--base-gap-large);
 
   margin-right: 4px;
 
@@ -189,7 +189,7 @@ function ObjectFieldTemplate(props) {
       const rmPath = override?.inGroup || path || ['root']
       if (props.formContext.onPinOverride)
         model.push({
-          label: `Pin current ${rmPath[rmPath.length - 1]} value as ${
+          label: `Add current ${rmPath[rmPath.length - 1]} value as ${
             props.formContext.level
           } override`,
           command: () => props.formContext.onPinOverride(rmPath),
@@ -349,7 +349,7 @@ function FieldTemplate(props) {
 
     if (props.formContext.onPinOverride)
       model.push({
-        label: `Pin current ${rmPath[rmPath.length - 1]} value as ${
+        label: `Add current ${rmPath[rmPath.length - 1]} value as ${
           props.formContext.level
         } override`,
         command: () => props.formContext.onPinOverride(rmPath),
@@ -537,7 +537,6 @@ const ArrayFieldTemplate = (props) => {
   // for some werird reason, the array sorting breaks when ArrayItemTemplate is
   // not wraped in react fragment. I suspected it was the key, but it was not.
   // I have no idea why this works, but it does. Do not touch!
-
 
   return (
     <FormArrayField>

@@ -5,9 +5,9 @@ import { TablePanel, Section } from '@ynput/ayon-react-components'
 import { TreeTable } from 'primereact/treetable'
 import { Column } from 'primereact/column'
 
-import EntityDetail from '/src/containers/entityDetail'
+import EntityDetail from './DetailsDialog'
 import { CellWithIcon } from '/src/components/icons'
-import { setFocusedTasks, setPairing, setUri } from '/src/features/context'
+import { setFocusedTasks, setPairing, setUri, updateBrowserFilters } from '/src/features/context'
 import { toast } from 'react-toastify'
 import { useGetTasksQuery } from '/src/services/getTasks'
 import useCreateContext from '../hooks/useCreateContext'
@@ -89,10 +89,36 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
     dispatch(setFocusedTasks({ ids: taskIds, names }))
   }
 
-  const dispatchFocusedTasks  = (taskId) => {
+  const dispatchFocusedTasks = (taskId) => {
     dispatch(setPairing([{ taskId: taskId }]))
     dispatch(setFocusedTasks({ ids: [taskId] }))
   }
+
+  const handleFilterProductsBySelected = (selected = []) => {
+    // get taskTypes based on selected tasks
+    const taskTypes = selected.map(
+      (taskId) => tasksData.find((task) => task.data.id === taskId)?.data?.taskType,
+    )
+
+    // filter out duplicates
+    const uniqueTaskTypes = [...new Set(taskTypes)]
+
+    dispatch(updateBrowserFilters({ productTaskTypes: uniqueTaskTypes }))
+  }
+
+  // CONTEXT MENU
+  const ctxMenuItems = (selected = []) => [
+    {
+      label: `Filter products by task${selected.length > 1 ? 's' : ''}`,
+      icon: 'filter_list',
+      command: () => handleFilterProductsBySelected(selected),
+    },
+    {
+      label: 'Detail',
+      command: () => setShowDetail(true),
+      icon: 'database',
+    },
+  ]
 
   const onContextMenu = (event) => {
     let newFocused = [...focusedTasks]
@@ -103,22 +129,11 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
       // update selection state
       dispatchFocusedTasks(itemId)
     }
-    
+
     ctxMenuShow(event.originalEvent, ctxMenuItems(newFocused))
   }
 
-  // CONTEXT MENU
-  const ctxMenuItems = () =>
-    [
-      {
-        label: 'Detail',
-        command: () => setShowDetail(true),
-        icon: 'database',
-      },
-    ]
-
-    const [ctxMenuShow] = useCreateContext([])
-    
+  const [ctxMenuShow] = useCreateContext([])
 
   // create 10 dummy rows
   const loadingData = useMemo(() => {
@@ -133,7 +148,6 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
   //
 
   const nameRenderer = (node) => {
-    
     const isActive = node.data.active
     const isGroup = node.data.isGroup
 
@@ -157,7 +171,7 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
       }
     }
 
-    const opacityStyle =  isActive ? {opacity: 1} : {opacity: 0.5}
+    const opacityStyle = isActive ? { opacity: 1 } : { opacity: 0.5 }
 
     return (
       <CellWithIcon
@@ -175,9 +189,8 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
     const isActive = node.data.active
     const taskType = node.data.taskType
     const resolveActiveOpacity = { opacity: isActive ? 1 : 0.3 }
-    return <span style={resolveActiveOpacity}>{taskType}</span>;
+    return <span style={resolveActiveOpacity}>{taskType}</span>
   }
-
 
   if (isError) {
     toast.error(`Unable to load tasks.`)
@@ -242,7 +255,12 @@ const TaskList = ({ style = {}, autoSelect = false }) => {
           >
             <Column field="name" header="Task" expander="true" body={nameRenderer} />
             {folderIds.length > 1 && <Column field="folderName" header="Folder" />}
-            <Column field="taskType" header="Task type" style={{ width: 90 }} body={renderTaskType}  />
+            <Column
+              field="taskType"
+              header="Task type"
+              style={{ width: 90 }}
+              body={renderTaskType}
+            />
           </TreeTable>
         )}
       </TablePanel>

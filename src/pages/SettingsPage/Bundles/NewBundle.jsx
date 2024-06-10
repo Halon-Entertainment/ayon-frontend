@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-toastify'
 import { Toolbar, Spacer, SaveButton, Button } from '@ynput/ayon-react-components'
-import { useCreateBundleMutation, useUpdateBundleMutation } from '/src/services/bundles'
+import {
+  useCreateBundleMutation,
+  useUpdateBundleMutation,
+} from '/src/services/bundles/updateBundles'
 
 import BundleForm from './BundleForm'
 import * as Styled from './Bundles.styled'
@@ -11,6 +14,8 @@ import BundleDeps from './BundleDeps'
 import useAddonSelection from './useAddonSelection'
 import { useSearchParams } from 'react-router-dom'
 import Shortcuts from '/src/containers/Shortcuts'
+import { useCheckBundleQuery } from '/src/services/bundles/getBundles'
+import BundleChecks from './BundleChecks/BundleChecks'
 
 const removeEmptyDevAddons = (addons = {}) => {
   if (!addons) return addons
@@ -30,6 +35,18 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
 
   const [createBundle, { isLoading: isCreating }] = useCreateBundleMutation()
   const [updateBundle, { isLoading: isUpdating }] = useUpdateBundleMutation()
+
+  const {
+    data: bundleCheckData,
+    isFetching: isFetchingCheck,
+    isError: isCheckError,
+  } = useCheckBundleQuery(
+    {
+      bundle: formData,
+    },
+    { skip: !formData },
+  )
+  const bundleCheckError = bundleCheckData?.issues?.some((issue) => issue.severity === 'error')
 
   //   build initial form data
   useEffect(() => {
@@ -67,7 +84,9 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
 
   // Select addon if query search has addon=addonName
   const addonListRef = useRef()
-  useAddonSelection(addons, setSelectedAddons, addonListRef, [formData])
+  const { selectAndScrollToAddon } = useAddonSelection(addons, setSelectedAddons, addonListRef, [
+    formData,
+  ])
 
   // if there's a a version param of {[addonName]: version}, select that addon
   const [searchParams, setSearchParams] = useSearchParams()
@@ -103,22 +122,24 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
   }, [searchParams, formData])
 
   const handleSave = async () => {
-    if (!formData?.name) {
+    const data = { ...formData }
+
+    if (!data?.name) {
       toast.error('Name is required')
       return
     }
 
-    if (formData?.name.includes(' ')) {
+    if (data?.name.includes(' ')) {
       toast.error('Name cannot contain spaces')
       return
     }
 
-    if (!developerMode) formData.isDev = false
+    if (!developerMode) data.isDev = false
 
     try {
-      await createBundle({ data: formData, archived: true }).unwrap()
+      await createBundle({ data: data, force: data.isDev }).unwrap()
       toast.success('Bundle created')
-      onSave(formData.name)
+      onSave(data.name)
     } catch (error) {
       console.log(error)
       toast.error('Error: ' + error?.data?.detail)
@@ -201,6 +222,14 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
     })
   }
 
+  const handleIssueClick = (addonName) => {
+    const addon = addons.find((a) => a.name === addonName)
+    if (!addon) return
+
+    // select and scroll into view
+    selectAndScrollToAddon(addon)
+  }
+
   // SHORTCUTS
   const shortcuts = [
     {
@@ -232,7 +261,11 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
         <SaveButton
           label={isDev ? 'Save dev bundle' : 'Create new bundle'}
           onClick={isDev ? handleUpdate : handleSave}
-          active={isDev ? !!formData?.name && devChanges : !!formData?.name}
+          active={
+            isDev
+              ? !!formData?.name && devChanges
+              : !!formData?.name && (!bundleCheckError || formData?.isDev)
+          }
           saving={isCreating || isUpdating}
         />
       </Toolbar>
@@ -325,6 +358,13 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
           )}
         </Styled.AddonTools>
         {isDev && <BundleDeps bundle={formData} onChange={handleDepPackagesDevChange} />}
+
+        <BundleChecks
+          check={bundleCheckData}
+          isLoading={isFetchingCheck}
+          isCheckError={isCheckError}
+          onIssueClick={handleIssueClick}
+        />
       </BundleForm>
     </>
   )
