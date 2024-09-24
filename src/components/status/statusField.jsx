@@ -69,7 +69,7 @@ const StatusStyled = styled.div`
         color: var(--md-sys-color-on-primary);
       }
 
-      :hover {
+      &:hover {
         background-color: var(--md-sys-color-primary-hover);
       }
     `}
@@ -107,7 +107,7 @@ const StatusStyled = styled.div`
 
 
   /* sets for hover and when active whilst open (top one) */
-  :hover {
+  &:hover {
     /* ${hoverStyle} */
     filter: brightness(110%);
   }
@@ -118,7 +118,7 @@ const StatusStyled = styled.div`
     css`
       ${invertHoverStyle}
 
-      :hover {
+      &:hover {
         ${invertHoverStyle}
       }
       [icon='expand_more'] {
@@ -152,7 +152,6 @@ const StatusField = ({
   statuses = {},
   invert,
   className,
-  showChevron,
   isChanged,
   ...props
 }) => {
@@ -185,7 +184,6 @@ const StatusField = ({
           {size !== 'icon' && (size === 'full' ? shownValue : shortName)}
         </span>
       </div>
-      {showChevron && <Icon icon="expand_more" />}
     </StatusStyled>
   )
 }

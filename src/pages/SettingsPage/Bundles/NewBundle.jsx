@@ -11,7 +11,7 @@ import BundleDeps from './BundleDeps'
 import useAddonSelection from './useAddonSelection'
 import { useSearchParams } from 'react-router-dom'
 import Shortcuts from '@containers/Shortcuts'
-import { useCheckBundleQuery } from '@queries/bundles/getBundles'
+import { useCheckBundleCompatibilityQuery } from '@queries/bundles/getBundles'
 import BundleChecks from './BundleChecks/BundleChecks'
 import usePrevious from '@hooks/usePrevious'
 
@@ -26,7 +26,7 @@ const removeEmptyDevAddons = (addons = {}) => {
   return newAddonDevelopment
 }
 
-const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, developerMode }) => {
+const NewBundle = ({ initBundle, onSave, addons, installers, isDev, developerMode }) => {
   // when updating a dev bundle, we need to track changes
   const [formData, setFormData] = useState(null)
   const [skipBundleCheck, setSkipBundleCheck] = useState(false)
@@ -40,7 +40,10 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
     if (!formData || !previousFormData) {
       return
     }
-    if (isEqual(formData.addonDevelopment, previousFormData.addonDevelopment)) {
+    if (
+      isEqual(formData.addonDevelopment, previousFormData.addonDevelopment) &&
+      formData.name === previousFormData.name
+    ) {
       setSkipBundleCheck(false)
     } else {
       setSkipBundleCheck(true)
@@ -48,20 +51,24 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
   }, [formData])
 
   const {
-    data: bundleCheckData,
+    data: bundleCheckData = {},
     isFetching: isFetchingCheck,
     isError: isCheckError,
-  } = useCheckBundleQuery(
+  } = useCheckBundleCompatibilityQuery(
     {
-      bundle: formData,
+      bundleModel: formData,
     },
     { skip: !formData || skipBundleCheck },
   )
-  const bundleCheckError = bundleCheckData?.issues?.some((issue) => issue.severity === 'error')
+
+  const bundleCheckError = bundleCheckData.issues?.some((issue) => issue.severity === 'error')
+
 
   //   build initial form data
   useEffect(() => {
-    if (initBundle && !isLoading) {
+    if (formData?.name === initBundle?.name) return
+
+    if (initBundle) {
       // addons = [{name: 'addon1', versions:{'1.0.0': {}}}]
       // reduce down addons to latest version
       const initAddons = {}
@@ -84,14 +91,14 @@ const NewBundle = ({ initBundle, onSave, addons, installers, isLoading, isDev, d
 
       const initForm = {
         addons: initAddons,
-        name: '',
-        ...initBundle,
         isDev: developerMode || isDev,
         addonDevelopment: { ...initBundle.addonDevelopment, ...initAddonsDev },
+        ...initBundle,
       }
+
       setFormData(initForm)
     }
-  }, [initBundle, installers, isLoading, addons])
+  }, [initBundle])
 
   // Select addon if query search has addon=addonName
   const addonListRef = useRef()

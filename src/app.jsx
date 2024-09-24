@@ -57,6 +57,7 @@ import { useLazyGetInfoQuery } from '@queries/auth/getAuth'
 import useTooltip from '@hooks/Tooltip/useTooltip'
 import WatchActivities from './containers/WatchActivities'
 import LauncherAuthPage from '@pages/LauncherAuthPage'
+import ReleaseInstallerDialog from '@containers/ReleaseInstallerDialog/ReleaseInstallerDialog'
 
 const App = () => {
   const user = useSelector((state) => state.user)
@@ -82,7 +83,7 @@ const App = () => {
     getInfo()
       .unwrap()
       .then((response) => {
-        setNoAdminUser(!!response.noAdminUser)
+        setNoAdminUser(!!response?.noAdminUser)
 
         if (response.onboarding) {
           setIsOnboarding(true)
@@ -164,6 +165,7 @@ const App = () => {
                           <ViewerDialog />
                           <ConfirmDialog />
                           <FileUploadPreview />
+                          <ReleaseInstallerDialog />
                           <Routes>
                             <Route
                               path="/"

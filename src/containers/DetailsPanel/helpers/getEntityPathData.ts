@@ -1,4 +1,4 @@
-import { FolderListItem } from '@api/rest'
+import { FolderListItem } from '@api/rest/folders'
 import { PathSegment } from '@components/EntityPath/EntityPath'
 import { $Any } from '@types'
 
@@ -39,7 +39,7 @@ const getEntityPathData = (entity: $Any, folders: FoldersMap) => {
   if (entity.entityType === 'version') {
     const productVersion = `${entity.product?.name} - ${entity.name}`
     // add product - version
-    segments.push({ type: 'version', label: productVersion, id: entity.product?.id })
+    segments.push({ type: 'version', label: productVersion, id: entity.id })
   }
   if (entity.entityType === 'task') {
     // add task

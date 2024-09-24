@@ -1,12 +1,11 @@
 import { useMemo, useRef } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { TablePanel, Section, Button, Icon } from '@ynput/ayon-react-components'
 
 import { DataTable } from 'primereact/datatable'
 import { Column } from 'primereact/column'
 import { useListProjectsQuery } from '@queries/project/getProject'
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router'
 import useCreateContext from '@hooks/useCreateContext'
 import useLocalStorage from '@hooks/useLocalStorage'
 import CollapseButton from '@components/CollapseButton'
@@ -14,7 +13,9 @@ import styled, { css } from 'styled-components'
 import clsx from 'clsx'
 import { toast } from 'react-toastify'
 import { useUpdateUserPreferencesMutation } from '@/services/user/updateUser'
-import userTableLoadingData from '@hooks/userTableLoadingData'
+import useTableLoadingData from '@hooks/useTableLoadingData'
+import { useProjectSelectDispatcher } from './ProjectMenu/hooks/useProjectSelectDispatcher'
+import useAyonNavigate from '@hooks/useAyonNavigate'
 
 const formatName = (rowData, defaultTitle, field = 'name') => {
   if (rowData[field] === '_') return defaultTitle
@@ -120,11 +121,14 @@ const ProjectList = ({
   onSelectAll,
   onSelectAllDisabled,
 }) => {
-  const navigate = useNavigate()
+  const navigate = useAyonNavigate()
   const tableRef = useRef(null)
   const user = useSelector((state) => state.user)
   const pinnedProjects =
     useSelector((state) => state.user?.data?.frontendPreferences?.pinnedProjects) || []
+
+  const dispatch = useDispatch()
+  const [handleProjectSelectionDispatches] = useProjectSelectDispatcher([])
 
   // by default only show active projects
   const params = { active: true }
@@ -263,13 +267,24 @@ const ProjectList = ({
     } // single select
   } // onSelectionChange
 
+  const onOpenProject = (sel) => {
+    const projectName = sel[0]
+    handleProjectSelectionDispatches(projectName)
+
+    const link = `/projects/${projectName}/browser`
+    setTimeout(() => dispatch((_, getState) => navigate(getState)(link)), 0)
+  }
+
   // TABLE CONTEXT MENU
   const getContextItems = (sel) => {
     const menuItems = [
       {
         label: 'Open Project',
         icon: 'event_list',
-        command: () => navigate(`/projects/${sel[0]}/browser`),
+        command: () => {
+          closeContextMenu()
+          onOpenProject(sel)
+        },
       },
     ]
 
@@ -291,7 +306,8 @@ const ProjectList = ({
         icon: 'settings_applications',
         command: () => {
           closeContextMenu()
-          navigate(`/manageProjects?project=${sel[0]}`)
+          //Enqueing navigation to event loop to avoid close context menu race condition
+          setTimeout(dispatch((_, getState) => navigate(getState)(`/manageProjects/anatomy?project=${sel[0]}`)), 0)
         },
       })
     }
@@ -356,7 +372,7 @@ const ProjectList = ({
     tableContextMenuShow(event.originalEvent, getContextItems(newSelection))
   }
 
-  const tableData = userTableLoadingData(projectList, isLoading, 10, 'name')
+  const tableData = useTableLoadingData(projectList, isLoading, 10, 'name')
 
   const sectionStyle = {
     ...styleSection,
@@ -408,7 +424,7 @@ const ProjectList = ({
           selection={selectionObj}
           onSelectionChange={onSelect && onSelectionChange}
           onRowClick={onRowClick}
-          onRowDoubleClick={(e) => navigate(`/projects/${e.data.name}/browser`)}
+          onRowDoubleClick={(e) => onOpenProject([e.data.name])}
           onContextMenu={onContextMenu}
           className={clsx('project-list', {
             loading: isLoading,

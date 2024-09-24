@@ -9,7 +9,7 @@
  * for this file to be re-created
  */
 
-import { restApi } from './rest';
+import { RestAPI } from '../services/ayon';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -284,6 +284,7 @@ export type FolderNodeTasksArgs = {
   folderIds?: InputMaybe<Array<Scalars['String']['input']>>;
   hasLinks?: InputMaybe<HasLinksFilter>;
   ids?: InputMaybe<Array<Scalars['String']['input']>>;
+  includeFolderChildren?: Scalars['Boolean']['input'];
   last?: InputMaybe<Scalars['Int']['input']>;
   names?: InputMaybe<Array<Scalars['String']['input']>>;
   sortBy?: InputMaybe<Scalars['String']['input']>;
@@ -683,6 +684,7 @@ export type ProjectNodeTasksArgs = {
   folderIds?: InputMaybe<Array<Scalars['String']['input']>>;
   hasLinks?: InputMaybe<HasLinksFilter>;
   ids?: InputMaybe<Array<Scalars['String']['input']>>;
+  includeFolderChildren?: Scalars['Boolean']['input'];
   last?: InputMaybe<Scalars['Int']['input']>;
   names?: InputMaybe<Array<Scalars['String']['input']>>;
   sortBy?: InputMaybe<Scalars['String']['input']>;
@@ -1307,12 +1309,44 @@ export type GetMarketInstallEventsQueryVariables = Exact<{ [key: string]: never;
 
 export type GetMarketInstallEventsQuery = { __typename?: 'Query', events: { __typename?: 'EventsConnection', edges: Array<{ __typename?: 'EventEdge', node: { __typename?: 'EventNode', id: string, status: string, description: string, summary: string } }> } };
 
+export type GetInstallEventsQueryVariables = Exact<{
+  ids: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+
+export type GetInstallEventsQuery = { __typename?: 'Query', events: { __typename?: 'EventsConnection', edges: Array<{ __typename?: 'EventEdge', node: { __typename?: 'EventNode', id: string, status: string, description: string } }> } };
+
 export type GetProjectLatestQueryVariables = Exact<{
   projectName: Scalars['String']['input'];
 }>;
 
 
 export type GetProjectLatestQuery = { __typename?: 'Query', project: { __typename?: 'ProjectNode', name: string } };
+
+export type GetProgressTaskQueryVariables = Exact<{
+  projectName: Scalars['String']['input'];
+  taskId: Scalars['String']['input'];
+}>;
+
+
+export type GetProgressTaskQuery = { __typename?: 'Query', project: { __typename?: 'ProjectNode', name: string, task: { __typename?: 'TaskNode', projectName: string, id: string, name: string, label?: string | null, taskType: string, status: string, assignees: Array<string>, updatedAt: any, active: boolean, hasReviewables: boolean, folder: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, folderType: string, parents: Array<string>, parent?: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, parents: Array<string> } | null } } } };
+
+export type GetTasksProgressQueryVariables = Exact<{
+  projectName: Scalars['String']['input'];
+  folderIds?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+
+export type GetTasksProgressQuery = { __typename?: 'Query', project: { __typename?: 'ProjectNode', name: string, tasks: { __typename?: 'TasksConnection', edges: Array<{ __typename?: 'TaskEdge', node: { __typename?: 'TaskNode', projectName: string, id: string, name: string, label?: string | null, taskType: string, status: string, assignees: Array<string>, updatedAt: any, active: boolean, hasReviewables: boolean, folder: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, folderType: string, parents: Array<string>, parent?: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, parents: Array<string> } | null } } }> } } };
+
+export type ProgressTaskFragmentFragment = { __typename?: 'TaskNode', projectName: string, id: string, name: string, label?: string | null, taskType: string, status: string, assignees: Array<string>, updatedAt: any, active: boolean, hasReviewables: boolean, folder: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, folderType: string, parents: Array<string>, parent?: { __typename?: 'FolderNode', id: string, name: string, label?: string | null, parents: Array<string> } | null } };
+
+export type GetAllProjectUsersAsAssigneeQueryVariables = Exact<{
+  projectName?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetAllProjectUsersAsAssigneeQuery = { __typename?: 'Query', users: { __typename?: 'UsersConnection', edges: Array<{ __typename?: 'UserEdge', node: { __typename?: 'UserNode', name: string, attrib: { __typename?: 'UserAttribType', fullName?: string | null } } }> } };
 
 export type GetKanbanQueryVariables = Exact<{
   projects?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
@@ -1370,6 +1404,33 @@ export const MessageFragmentFragmentDoc = `
     type
     name
     label
+  }
+}
+    `;
+export const ProgressTaskFragmentFragmentDoc = `
+    fragment ProgressTaskFragment on TaskNode {
+  projectName
+  id
+  name
+  label
+  taskType
+  status
+  assignees
+  updatedAt
+  active
+  hasReviewables
+  folder {
+    id
+    name
+    label
+    folderType
+    parents
+    parent {
+      id
+      name
+      label
+      parents
+    }
   }
 }
     `;
@@ -1479,10 +1540,61 @@ export const GetMarketInstallEventsDocument = `
   }
 }
     `;
+export const GetInstallEventsDocument = `
+    query GetInstallEvents($ids: [String!]!) {
+  events(last: 100, ids: $ids) {
+    edges {
+      node {
+        id
+        status
+        description
+      }
+    }
+  }
+}
+    `;
 export const GetProjectLatestDocument = `
     query GetProjectLatest($projectName: String!) {
   project(name: $projectName) {
     name
+  }
+}
+    `;
+export const GetProgressTaskDocument = `
+    query GetProgressTask($projectName: String!, $taskId: String!) {
+  project(name: $projectName) {
+    name
+    task(id: $taskId) {
+      ...ProgressTaskFragment
+    }
+  }
+}
+    ${ProgressTaskFragmentFragmentDoc}`;
+export const GetTasksProgressDocument = `
+    query GetTasksProgress($projectName: String!, $folderIds: [String!]) {
+  project(name: $projectName) {
+    name
+    tasks(folderIds: $folderIds, last: 1000, includeFolderChildren: true) {
+      edges {
+        node {
+          ...ProgressTaskFragment
+        }
+      }
+    }
+  }
+}
+    ${ProgressTaskFragmentFragmentDoc}`;
+export const GetAllProjectUsersAsAssigneeDocument = `
+    query GetAllProjectUsersAsAssignee($projectName: String) {
+  users(last: 2000, projectName: $projectName) {
+    edges {
+      node {
+        name
+        attrib {
+          fullName
+        }
+      }
+    }
   }
 }
     `;
@@ -1526,7 +1638,7 @@ export const GetKanbanTasksDocument = `
 }
     ${KanbanFragmentFragmentDoc}`;
 
-const injectedRtkApi = restApi.injectEndpoints({
+const injectedRtkApi = RestAPI.injectEndpoints({
   endpoints: (build) => ({
     GetProductVersions: build.query<GetProductVersionsQuery, GetProductVersionsQueryVariables>({
       query: (variables) => ({ document: GetProductVersionsDocument, variables })
@@ -1543,8 +1655,20 @@ const injectedRtkApi = restApi.injectEndpoints({
     GetMarketInstallEvents: build.query<GetMarketInstallEventsQuery, GetMarketInstallEventsQueryVariables | void>({
       query: (variables) => ({ document: GetMarketInstallEventsDocument, variables })
     }),
+    GetInstallEvents: build.query<GetInstallEventsQuery, GetInstallEventsQueryVariables>({
+      query: (variables) => ({ document: GetInstallEventsDocument, variables })
+    }),
     GetProjectLatest: build.query<GetProjectLatestQuery, GetProjectLatestQueryVariables>({
       query: (variables) => ({ document: GetProjectLatestDocument, variables })
+    }),
+    GetProgressTask: build.query<GetProgressTaskQuery, GetProgressTaskQueryVariables>({
+      query: (variables) => ({ document: GetProgressTaskDocument, variables })
+    }),
+    GetTasksProgress: build.query<GetTasksProgressQuery, GetTasksProgressQueryVariables>({
+      query: (variables) => ({ document: GetTasksProgressDocument, variables })
+    }),
+    GetAllProjectUsersAsAssignee: build.query<GetAllProjectUsersAsAssigneeQuery, GetAllProjectUsersAsAssigneeQueryVariables | void>({
+      query: (variables) => ({ document: GetAllProjectUsersAsAssigneeDocument, variables })
     }),
     GetKanban: build.query<GetKanbanQuery, GetKanbanQueryVariables | void>({
       query: (variables) => ({ document: GetKanbanDocument, variables })

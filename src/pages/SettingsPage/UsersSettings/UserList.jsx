@@ -9,7 +9,8 @@ import { useMemo } from 'react'
 import styled from 'styled-components'
 import useCreateContext from '@hooks/useCreateContext'
 import clsx from 'clsx'
-import userTableLoadingData from '@hooks/userTableLoadingData'
+import useTableLoadingData from '@hooks/useTableLoadingData'
+import { accessGroupsSortFunction } from '@helpers/user'
 
 const StyledProfileRow = styled.div`
   display: flex;
@@ -50,8 +51,8 @@ const UserList = ({
   userList,
   tableList,
   setShowRenameUser,
+  setShowDeleteUser,
   setShowSetPassword,
-  onDelete,
   isLoading,
   onSelectUsers,
   isSelfSelected,
@@ -95,7 +96,7 @@ const UserList = ({
       {
         label: 'Delete selected',
         disabled: !selection.length || isSelfSelected,
-        command: () => onDelete(newSelectedUsers),
+        command: () => setShowDeleteUser(newSelectedUsers),
         icon: 'delete',
         danger: true,
       },
@@ -104,7 +105,7 @@ const UserList = ({
 
   const [ctxMenuShow] = useCreateContext()
 
-  const tableData = userTableLoadingData(tableList, isLoading, 40, 'name')
+  const tableData = useTableLoadingData(tableList, isLoading, 40, 'name')
 
   // Render
   return (
@@ -152,6 +153,7 @@ const UserList = ({
                   </span>
                 ))
             }
+            sortFunction={accessGroupsSortFunction}
             sortable
             resizeable
           />
