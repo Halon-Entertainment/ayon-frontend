@@ -1,4 +1,4 @@
-import { Button } from '@ynput/ayon-react-components'
+import { Button, theme } from '@ynput/ayon-react-components'
 import styled, { css } from 'styled-components'
 
 export const CommentWrapper = styled.div`
@@ -66,7 +66,7 @@ export const Body = styled.div`
     margin-top: 0;
   }
 
-  & > *:not(.tools) {
+  & > *:not(.tools):not(h1) {
     margin-bottom: 0;
   }
 
@@ -85,6 +85,27 @@ export const Body = styled.div`
     }
   }
 
+  h1 {
+    ${theme.titleLarge}
+    font-size: 24px;
+  }
+
+  h2 {
+    ${theme.titleMedium}
+    font-size: 20px;
+  }
+
+  h3 {
+    ${theme.titleSmall}
+    font-size: 16px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin-top: 16px;
+  }
+
   ul,
   ol {
     .reference {
@@ -98,7 +119,7 @@ export const Body = styled.div`
     flex-direction: column;
     gap: var(--base-gap-large);
     padding-left: 8px;
-    margin: 8px 0;
+    margin: 16px 0;
 
     li {
       align-items: center;
@@ -234,5 +255,28 @@ export const ToolButton = styled(Button)`
   [icon='edit_square'] {
     position: relative;
     top: -1px;
+  }
+`
+
+export const Tip = styled.span`
+  background-color: var(--md-sys-color-secondary-container);
+  display: flex;
+  align-items: center;
+  gap: var(--base-gap-small);
+  border-radius: var(--border-radius-m);
+  padding: var(--padding-m);
+  margin: 16px 0 !important;
+
+  &,
+  .icon {
+    color: var(--md-sys-color-on-secondary-container);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .icon {
+    font-size: 24px;
   }
 `

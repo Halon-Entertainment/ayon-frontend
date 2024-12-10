@@ -7,7 +7,7 @@ const outputFiles = {
   market: ['marketAddonList', 'marketAddonDetail', 'marketAddonVersionDetail'],
   watchers: ['getEntityWatchers', 'setEntityWatchers'],
   inbox: ['manageInboxItem'],
-  project: ['getProject', 'listProjects', 'getProjectAnatomy'],
+  project: ['getProject', 'listProjects', 'getProjectAnatomy', 'getProjectUsers'],
   review: [
     'getReviewablesForVersion',
     'getReviewablesForProduct',
@@ -28,10 +28,12 @@ const outputFiles = {
   auth: ['createSession'],
   addons: ['listAddons', 'deleteAddonVersion', 'uploadAddonZipFile'],
   activities: ['deleteProjectActivity'],
-  users: ['getUser'],
+  users: ['getUser', 'setFrontendPreferences'],
   releases: ['getReleases', 'getReleaseInfo'],
   installers: ['listInstallers', 'createInstaller'],
   dependencyPackages: ['listDependencyPackages', 'createDependencyPackage'],
+  cloud: ['getYnputCloudInfo', 'setYnputCloudKey', 'deleteYnputCloudKey'],
+  attributes: ['getAttributeList', 'setAttributeList', 'getAttributeConfig'],
 }
 
 const buildOutputFiles = (files: { [name: string]: string[] }) =>

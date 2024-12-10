@@ -15,6 +15,14 @@ const patchKanban = (
       { projects: projects, assignees: assignees },
       (draft) => {
         const taskIndex = draft.findIndex((task) => task.id === taskId)
+        let patchData = { ...data }
+        // if the data include attrib.priority it needs to be transformed to just priority
+        // this is because priority is a top level field on kanban query
+        if (data?.attrib?.priority) {
+          const { priority } = patchData.attrib
+          patchData = { ...patchData, priority }
+        }
+
         if (taskIndex === -1) {
           // task not found, assignee must have just been added
           if (taskData) {
@@ -35,7 +43,7 @@ const patchKanban = (
             draft.splice(taskIndex, 1)
           } else {
             // task found: update the task in the cache
-            const newData = { ...draft[taskIndex], ...data }
+            const newData = { ...draft[taskIndex], ...patchData }
             draft[taskIndex] = newData
           }
         }
@@ -47,7 +55,7 @@ const patchKanban = (
 }
 
 // try to patch the progress view if there are queries that need to be updated
-const patchProgressView = ({ operations = [], state, dispatch }) => {
+const patchProgressView = ({ operations = [], state, dispatch, entityType }) => {
   // create invalidation tags for progress view
   const invalidationTags = operations.map((o) => ({ type: 'progress', id: o.id }))
   // find the entries that need to be updated
@@ -61,23 +69,35 @@ const patchProgressView = ({ operations = [], state, dispatch }) => {
       dispatch(
         api.util.updateQueryData(entry.endpointName, entry.originalArgs, (draft) => {
           for (const operation of operations) {
-            const taskId = operation.id
+            const entityId = operation.id
             const patch = operation.data
-            const folderId = operation.meta?.folderId
-            const folder = draft.find((folder) => folder.id === folderId)
-            if (!folder) throw new Error('Patching progress view: folder not found')
-            const task = folder.tasks?.find((task) => task.id === taskId)
-            if (!task) throw new Error('Patching progress view: task not found')
-            // update task
-            const newTask = { ...task, ...patch }
-            // update folder
-            const newFolder = {
-              ...folder,
-              tasks: folder.tasks.map((t) => (t.id === taskId ? newTask : t)),
+
+            // patch the updated task data
+            if (entityType === 'task') {
+              const folderId = operation.meta?.folderId
+              const folder = draft.find((folder) => folder.id === folderId)
+              if (!folder) throw new Error('Patching progress view: folder not found')
+              const task = folder.tasks?.find((task) => task.id === entityId)
+              if (!task) throw new Error('Patching progress view: task not found')
+              // update task
+              const newTask = { ...task, ...patch }
+              // update folder
+              const newFolder = {
+                ...folder,
+                tasks: folder.tasks.map((t) => (t.id === entityId ? newTask : t)),
+              }
+              // update query
+              const folderIndex = draft.findIndex((f) => f.id === folderId)
+              draft[folderIndex] = newFolder
+            } else if (entityType === 'folder') {
+              const folder = draft.find((folder) => folder.id === entityId)
+              if (!folder) throw new Error('Patching progress view: folder not found')
+              // update folder
+              const newFolder = { ...folder, ...patch }
+              // update query
+              const folderIndex = draft.findIndex((f) => f.id === entityId)
+              draft[folderIndex] = newFolder
             }
-            // update query
-            const folderIndex = draft.findIndex((f) => f.id === folderId)
-            draft[folderIndex] = newFolder
           }
         }),
       ),
@@ -122,6 +142,7 @@ const updateEntity = api.injectEndpoints({
           const currentDashNeedsUpdating = hasSomeAssignees && hasSomeProjects
 
           if (currentDashNeedsUpdating) {
+            console.log({ data })
             const [result, wasPatched] = patchKanban(
               { assignees: cacheUsers, projects: dashboardProjects },
               { newAssignees, taskId: entityId, data },
@@ -245,6 +266,10 @@ const updateEntity = api.injectEndpoints({
                 patchData.users = patchData.assignees
                 delete patchData.assignees
               }
+              if (patchData.attrib) {
+                const newAttrib = { ...draft.attrib, ...patchData.attrib }
+                patchData.attrib = newAttrib
+              }
               const newData = { ...draft, ...patchData }
               Object.assign(draft, newData)
             },
@@ -311,6 +336,11 @@ const updateEntity = api.injectEndpoints({
                     delete patchData.assignees
                   }
 
+                  if (patchData.attrib) {
+                    const newAttrib = { ...draft[entityIndex].attrib, ...patchData.attrib }
+                    patchData.attrib = newAttrib
+                  }
+
                   // merge the new data into the entity
                   const newData = { ...draft[entityIndex], ...patchData }
 
@@ -322,9 +352,9 @@ const updateEntity = api.injectEndpoints({
           const state = getState()
 
           let progressPatches = []
-          if (entityType === 'task') {
+          if (entityType === 'task' || entityType === 'folder') {
             // patch the progress for task updates
-            progressPatches = patchProgressView({ operations, state, dispatch })
+            progressPatches = patchProgressView({ operations, state, dispatch, entityType })
           }
 
           // check if any of the requests failed and invalidate the tasks cache again to refetch

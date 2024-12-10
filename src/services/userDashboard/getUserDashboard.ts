@@ -19,6 +19,7 @@ export type GetKanbanProjectUsersResponse = KanbanProjectUserNode[]
 import { DefinitionsFromApi, OverrideResultType, TagTypesFromApi } from '@reduxjs/toolkit/query'
 import getUserProjectsAccess from './getUserProjectsAccess'
 import { ThunkDispatch, UnknownAction } from '@reduxjs/toolkit'
+import { ProjectAnatomy } from '@api/rest/project'
 
 type Definitions = DefinitionsFromApi<typeof api>
 type TagTypes = TagTypesFromApi<typeof api>
@@ -35,7 +36,15 @@ type UpdatedDefinitions = Omit<
   >
 }
 
-const transformKanban = (response: GetKanbanQuery) => response.kanban.edges.map(({ node }) => node)
+// get edges and sort by task label || name
+const transformKanban = (response: GetKanbanQuery) =>
+  response.kanban.edges
+    .map(({ node }) => node)
+    .sort((a, b) => {
+      const aLabel = a.label || a.name
+      const bLabel = b.label || b.name
+      return aLabel.localeCompare(bLabel)
+    })
 
 const provideKanbanTags = (result: GetKanbanResponse | undefined, _error: $Any, args: $Any) =>
   result?.length
@@ -224,12 +233,12 @@ type GetProjectsInfoParams = {
   projects: string[]
 }
 
-type GetProjectsInfoResponse = $Any
+export type GetProjectsInfoResponse = { [projectName: string]: ProjectAnatomy | undefined }
 
 const injectedDashboardRestApi = api.injectEndpoints({
   endpoints: (build) => ({
     getProjectsInfo: build.query<GetProjectsInfoResponse, GetProjectsInfoParams>({
-      async queryFn({ projects = [] }, { dispatch }) {
+      async queryFn({ projects = [] }, { dispatch, forced }) {
         try {
           // get project info for each project
           const projectInfo: $Any = {}
@@ -239,7 +248,7 @@ const injectedDashboardRestApi = api.injectEndpoints({
             const response = await dispatch(
               getProjectApi.endpoints.getProjectAnatomy.initiate(
                 { projectName: project },
-                { forceRefetch: false },
+                { forceRefetch: forced },
               ),
             )
 
@@ -255,6 +264,8 @@ const injectedDashboardRestApi = api.injectEndpoints({
           return { error, meta: undefined, data: undefined }
         }
       },
+      providesTags: (_res, _error, { projects }) =>
+        projects.map((projectName) => ({ type: 'project', id: projectName })),
     }),
   }),
 })

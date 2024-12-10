@@ -1,9 +1,12 @@
-// Prime react
+// PrimeReact components
 import { DataTable, DataTableBaseProps, DataTableColumnResizeEndEvent } from 'primereact/datatable'
 import { Column } from 'primereact/column'
-// libraries
+
+// Styling
 import styled from 'styled-components'
-// components
+import './TaskProgressTable.scss'
+
+// Components
 import {
   FolderBody,
   TaskColumnHeader,
@@ -11,28 +14,34 @@ import {
   TaskStatusBar,
   TaskTypeCell,
 } from '..'
+import ParentBody from '../ParentBody/ParentBody'
+import { Body } from '../FolderBody/FolderBody.styled'
 
-// state
-import { useDispatch, useSelector } from 'react-redux'
-import { toggleDetailsPanel } from '@state/details'
-// types
+// State management
+import { useAppDispatch, useAppSelector } from '@state/store'
+import { selectProgress, toggleDetailsOpen } from '@state/progress'
+import { setFocusedTasks } from '@state/context'
+
+// Types
 import type { Status, TaskType } from '@api/rest/project'
 import type {
   FolderRow,
   TaskTypeRow,
   TaskTypeStatusBar,
 } from '../../helpers/formatTaskProgressForTable'
-import type { GetAllProjectUsersAsAssigneeResult } from '@queries/user/getUsers'
+import type { Assignees } from '@queries/user/getUsers'
+import { AttributeEnumItem } from '@api/rest/attributes'
+
+// Hooks
 import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react'
-import { $Any } from '@types'
 import { InView } from 'react-intersection-observer'
 import useCreateContext from '@hooks/useCreateContext'
-import { Body } from '../FolderBody/FolderBody.styled'
-import clsx from 'clsx'
-import ParentBody from '../ParentBody/ParentBody'
-import { useFolderSort } from '../../helpers'
 import useLocalStorage from '@hooks/useLocalStorage'
+
+// Helpers
+import { useFolderSort } from '../../hooks'
 import { taskStatusSortFunction } from '@containers/TasksProgress/helpers/taskStatusSortFunction'
+import clsx from 'clsx'
 
 export const Cells = styled.div`
   display: flex;
@@ -56,7 +65,8 @@ interface TasksProgressTableProps
   selectedAssignees: string[]
   statuses: Status[]
   taskTypes: TaskType[]
-  users: GetAllProjectUsersAsAssigneeResult
+  priorities: AttributeEnumItem[]
+  users: Assignees
   allExpanded: boolean
   expandedRows: string[]
   collapsedRows: string[]
@@ -78,6 +88,7 @@ export const TasksProgressTable = ({
   selectedAssignees = [],
   statuses = [], // project statuses schema
   taskTypes = [], // project task types schema
+  priorities = [], // project priorities schema
   users = [], // users in the project
   allExpanded,
   expandedRows = [],
@@ -90,12 +101,13 @@ export const TasksProgressTable = ({
   onOpenViewer,
   ...props
 }: TasksProgressTableProps) => {
-  const selectedTasks = useSelector((state: $Any) => state.context.focused.tasks) as string[]
-  const detailsOpen = useSelector((state: $Any) => state.details.open) as boolean
-  const dispatch = useDispatch()
+  const selectedTasks = useAppSelector((state) => state.context.focused.tasks) as string[]
+  const progressSelected = useAppSelector((state) => state.progress.selected)
+  const detailsOpen = useAppSelector((state) => state.details.open)
+  const dispatch = useAppDispatch()
 
   // HACK: this forces a complete rerender of the table
-  // used for resting the column widths
+  // used for resetting the column widths
   const [reloadTable, setReloadTable] = useState(false)
   const forceReloadTable = () => setReloadTable(true)
   useEffect(() => {
@@ -174,7 +186,7 @@ export const TasksProgressTable = ({
   const sortFolderFunction = useFolderSort(tableData)
 
   const togglePanel = (open: boolean = true) => {
-    dispatch(toggleDetailsPanel(open))
+    dispatch(toggleDetailsOpen(open))
   }
 
   const buildContextMenu = (_selection: string[], taskId: string) => {
@@ -214,10 +226,7 @@ export const TasksProgressTable = ({
   type SavedWidths = { [task: string]: number | null }
 
   const localStorageKey = `tasks-progress-table-${projectName}`
-  const [savedWidths, setSavedWidths] = useLocalStorage(localStorageKey, null) as [
-    SavedWidths,
-    (value: SavedWidths) => void,
-  ]
+  const [savedWidths, setSavedWidths] = useLocalStorage<SavedWidths | null>(localStorageKey, null)
 
   const resolveColumnWidth = (taskType: string, useDefault?: boolean) => {
     const screenWidthMultiple = (min: number, max: number, target: number): number => {
@@ -281,6 +290,15 @@ export const TasksProgressTable = ({
     ctxMenuShow(e, buildColumnHeaderMenuItems(taskType))
   }
 
+  const handleFolderOpen = (folderId: string) => {
+    // update the selected progress
+    dispatch(selectProgress({ ids: [folderId], type: 'folder' }))
+    // remove any selected tasks
+    dispatch(setFocusedTasks([]))
+    // open the details panel
+    togglePanel(true)
+  }
+
   const getIsExpanded = (id: string) =>
     (allExpanded || expandedRows.includes(id)) && !collapsedRows.includes(id)
 
@@ -310,6 +328,7 @@ export const TasksProgressTable = ({
         thead: { style: { zIndex: 101, height: 36 } },
       }}
       className="tasks-progress-table"
+      rowClassName={(rowData: FolderRow) => (rowData.__isParent ? 'parent-row' : 'folder-row')}
       {...props}
     >
       <Column
@@ -333,14 +352,20 @@ export const TasksProgressTable = ({
             />
           ) : (
             <FolderBody
-              name={row._folder}
-              parents={row._parents}
-              folderId={row.__folderId}
-              folderIcon={row._folderIcon}
+              folder={{
+                id: row.__folderId,
+                name: row._folder,
+                icon: row.__folderIcon,
+                status: statuses.find((s) => s.name === row.__folderStatus),
+                updatedAt: row.__folderUpdatedAt,
+              }}
+              isSelected={
+                progressSelected.type === 'folder' && progressSelected.ids.includes(row.__folderId)
+              }
               projectName={row.__projectName}
-              isLoading={false}
               isExpanded={getIsExpanded(row.__folderId)}
               onExpandToggle={() => onExpandRow(row.__folderId)}
+              onFolderOpen={handleFolderOpen}
             />
           )
         }
@@ -402,6 +427,7 @@ export const TasksProgressTable = ({
                     if (target.closest('.editable')) {
                       return
                     }
+
                     onSelection(task.id, e.metaKey || e.ctrlKey, e.shiftKey)
                   }
 
@@ -427,12 +453,12 @@ export const TasksProgressTable = ({
 
                   const isExpanded = getIsExpanded(task.folder?.id)
                   const isSelected = selectedTasks.includes(task.id)
-                  const isActive = activeTask === task.id
+                  const isActive = progressSelected.type === 'task' && activeTask === task.id
 
                   return (
                     <InView
                       root={tableWrapperEl}
-                      rootMargin="200px 200px 200px 200px"
+                      rootMargin="100px 100px 100px 100px"
                       key={task.id}
                     >
                       {({ inView, ref }) => (
@@ -462,6 +488,7 @@ export const TasksProgressTable = ({
                               isExpanded={isExpanded}
                               taskIcon={taskType?.icon || ''}
                               statuses={statuses}
+                              priorities={priorities}
                               onChange={onChange}
                             />
                           ) : (

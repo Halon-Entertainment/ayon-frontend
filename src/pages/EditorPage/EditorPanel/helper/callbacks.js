@@ -102,6 +102,7 @@ const createInitialForm = ({ nodeIds, nodes, editorNodes, attribs, changes, setT
     nameValues,
     labelValues,
     assigneesValues,
+    tagValues
   })
 
   const type = nodes[nodeIds[0]]?.data?.__entityType
@@ -242,7 +243,7 @@ const handleLocalChange = (
   value,
   changeKey,
   field,
-  { form, nodeIds, nodes, setLocalChange, setForm },
+  { form, nodeIds, nodes, setLocalChange, setForm, isAttribute = true },
 ) => {
   if (!(changeKey in form)) {
     return
@@ -259,7 +260,7 @@ const handleLocalChange = (
     newValue = newValue.toISOString()
   }
 
-  const isChanged = hasChanged(oldValueObj, field, changeKey, newValue, {nodeIds, nodes})
+  const isChanged = hasChanged(oldValueObj, field, changeKey, newValue, { nodeIds, nodes, isAttribute })
 
   newForm[changeKey] = {
     ...newForm[changeKey],

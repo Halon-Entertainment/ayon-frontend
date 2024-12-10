@@ -63,6 +63,8 @@ const PanelHeader = styled.div`
 `
 
 const PanelContent = styled.div`
+  width: 100%;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   border-left: 1px dotted #434a56;
@@ -123,9 +125,11 @@ const SettingsPanel = ({
   const [expandedObjects, setExpandedObjects] = useLocalStorage('expanded-settings-keys', [])
 
   const onToggle = () => {
-    if (expandedObjects.includes(objId))
+    if (expandedObjects.includes(objId)) {
       setExpandedObjects(expandedObjects.filter((id) => id !== objId))
-    else setExpandedObjects([...expandedObjects, objId])
+    } else {
+      setExpandedObjects([...expandedObjects, objId])
+    }
   }
 
   const expanded = expandedObjects.includes(objId)

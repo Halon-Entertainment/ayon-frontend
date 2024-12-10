@@ -10,6 +10,13 @@ class BrowserPage {
 
   async addFolderComment(projectName, folderName, comment) {
     await this.goto(projectName)
+    try {
+      const snoozeIsVisible = await this.page.getByRole('button', { name: 'snooze Snooze' }).isVisible()
+      if (snoozeIsVisible) {
+        await this.page.getByRole('button', { name: 'snooze Snooze' }).click()
+      }
+    } catch (e) { }
+
     await this.page.getByRole('cell', { name: `folder${folderName}` }).click()
     await this.page.getByText('Add a comment...').click()
     await this.page.locator('.ql-editor').fill(comment)
