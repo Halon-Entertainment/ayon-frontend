@@ -3,7 +3,7 @@ import { Icon } from '@ynput/ayon-react-components'
 import clsx from 'clsx'
 import * as Styled from './Thumbnail.styled'
 
-interface ThumbnailProps extends HTMLAttributes<HTMLDivElement> {
+export interface ThumbnailProps extends HTMLAttributes<HTMLDivElement> {
   projectName: string
   entityType: string
   entityId: string
@@ -33,15 +33,23 @@ const Thumbnail = ({
   showBorder = true,
   ...props
 }: ThumbnailProps) => {
-  let url =
-    src || (projectName && `/api/projects/${projectName}/${entityType}s/${entityId}/thumbnail`)
-  const queryArgs = `?updatedAt=${entityUpdatedAt}`
-  url += queryArgs
+  let url = ''
+  if (entityType && entityId && entityUpdatedAt) {
+    url =
+      src || (projectName && `/api/projects/${projectName}/${entityType}s/${entityId}/thumbnail`)
+    const queryArgs = `?updatedAt=${entityUpdatedAt}`
+    url += queryArgs
+  }
   const isWrongEntity = ['product'].includes(entityType)
 
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   useEffect(() => {
+    if (url === '') {
+      setLoaded(true)
+      setError(true)
+      return
+    }
     // Reset loaded and error states when src changes
     setLoaded(false)
     setError(false)

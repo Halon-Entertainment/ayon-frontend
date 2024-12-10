@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400..800;1,6..12,400..800&display=swap');
-@import './loadingShimmer.scss';
 
 input {
   color: var(--md-sys-color-on-surface);
@@ -58,6 +57,9 @@ strong {
   --color-hl-staging: hsl(357, 100%, 76%);
   --color-hl-staging-hover: hsl(357, 100%, 73%);
   --color-hl-staging-active: hsl(357, 100%, 70%);
+
+  // table colors
+  --color-table-border: hsl(210 8% 18%);
 }
 
 #root {
@@ -469,7 +471,7 @@ a {
 }
 
 .react-datepicker-popper {
-  z-index: 1000;
+  z-index: 1000 !important;
 }
 
 // clearing a date input
@@ -593,11 +595,11 @@ a {
   .p-button {
     border: none;
     margin-right: 0;
+    background-color: var(--md-sys-color-surface-container-highest);
+
     &:focus {
       outline: none;
     }
-
-    background-color: var(--md-sys-color-surface-container-highest);
 
     &:hover {
       background-color: var(--md-sys-color-surface-container-highest-hover);

@@ -17,6 +17,9 @@ import transformKanbanTasks from './transformKanbanTasks'
 import styled from 'styled-components'
 import clsx from 'clsx'
 import { toggleDetailsPanel } from '@state/details'
+import { filterProjectStatuses } from '@hooks/useScopedStatuses'
+import { useGetAttributeConfigQuery } from '@queries/attributes/getAttributes'
+import { getPriorityOptions } from '@pages/TasksProgressPage/helpers'
 
 const StyledSplitter = styled(Splitter)`
   .details-panel-splitter {
@@ -99,6 +102,10 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
     { skip: !assignees.length || !selectedProjects?.length },
   )
 
+  // get priority attribute so we know the colors and icons for each priority
+  const { data: priorityAttrib } = useGetAttributeConfigQuery({ attributeName: 'priority' })
+  const priorities = getPriorityOptions(priorityAttrib, 'task') || []
+
   // update the uri breadcrumbs when the selected tasks change
   useEffect(() => {
     if (selectedTasks.length && !isLoadingTasks) {
@@ -111,14 +118,14 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
         return
       }
     }
-    // no tasks in current lproject or selected tasks NOT in current project
-      dispatch(setUri(null))
+    // no tasks in current project or selected tasks NOT in current project
+    dispatch(setUri(null))
   }, [selectedTasks, isLoadingTasks, tasks])
 
   // add extra fields to tasks like: icons, thumbnailUrl, shortPath
   const transformedTasks = useMemo(
-    () => transformKanbanTasks(tasks, projectsInfo, isLoadingTasks),
-    [tasks, projectsInfo, isLoadingTasks],
+    () => transformKanbanTasks(tasks, { projectsInfo, isLoadingTasks, priorities }),
+    [tasks, projectsInfo, priorities, isLoadingTasks],
   )
 
   const selectedTasksData = useMemo(
@@ -140,6 +147,11 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
     [projectsInfo, isLoadingInfo],
   )
 
+  const scopedStatusesOptions = useMemo(
+    () => filterProjectStatuses(statusesOptions, ['task']),
+    [statusesOptions, isLoadingInfo],
+  )
+
   const statusesIntersection = useMemo(
     () => getIntersectionFields(projectsInfo, 'statuses', selectedTasksProjects),
     [projectsInfo, selectedTasksProjects],
@@ -147,10 +159,10 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
 
   const disabledStatuses = useMemo(
     () =>
-      statusesOptions
+      scopedStatusesOptions
         .filter((s) => !statusesIntersection.some((s2) => s2.name === s.name))
         .map((s) => s.name),
-    [projectsInfo, selectedTasksProjects, statusesOptions],
+    [projectsInfo, selectedTasksProjects, scopedStatusesOptions],
   )
 
   // find the intersection of all the tags of the projects for the selected tasks
@@ -217,9 +229,10 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
           isLoading={isLoadingAll}
           projectsInfo={projectsInfo}
           taskFields={taskFields}
-          statusesOptions={statusesOptions}
+          statusesOptions={scopedStatusesOptions}
           disabledStatuses={disabledStatuses}
           disabledProjectUsers={disabledProjectUsers}
+          priorities={priorities}
           projectUsers={projectUsers}
           isLoadingProjectUsers={isLoadingProjectUsers}
         />
@@ -238,7 +251,6 @@ const UserTasksContainer = ({ projectsInfo = {}, isLoadingInfo }) => {
           <DetailsPanel
             onClose={handlePanelClose}
             entitiesData={selectedTasksData}
-            statusesOptions={statusesOptions}
             disabledStatuses={disabledStatuses}
             tagsOptions={tagsOptions}
             projectUsers={projectUsers}

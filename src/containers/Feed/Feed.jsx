@@ -31,16 +31,17 @@ const Feed = ({
   projectInfo = {},
   projectName,
   entityType,
-  isSlideOut,
   isMultiProjects,
-  scope,
+  scope = 'dashboard',
+  statePath = 'pinned',
+  readOnly,
+  statuses = [],
 }) => {
   const dispatch = useDispatch()
   const userName = useSelector((state) => state.user.name)
-  const path = isSlideOut ? 'slideOut' : 'pinned'
-  const activityTypes = useSelector((state) => state.details[path][scope].activityTypes)
-  const filter = useSelector((state) => state.details[path][scope].filter)
-  const highlighted = useSelector((state) => state.details[path].highlighted)
+  const activityTypes = useSelector((state) => state.details[statePath][scope].activityTypes)
+  const filter = useSelector((state) => state.details[statePath][scope].filter)
+  const highlighted = useSelector((state) => state.details[statePath].highlighted) || []
 
   // hide comment input for specific filters
   const hideCommentInput = ['publishes'].includes(filter)
@@ -143,7 +144,13 @@ const Feed = ({
   useScrollOnInputOpen({ feedRef, isCommentInputOpen, height: 93 })
 
   // save scroll position of a feed
-  useSaveScrollPos({ entities, feedRef, filter, disabled: highlighted.length })
+  useSaveScrollPos({
+    entities,
+    feedRef,
+    filter,
+    disabled: highlighted.length,
+    isLoading: isLoadingNew,
+  })
 
   // try and scroll to highlighted activity
   useScrollToHighlighted({
@@ -265,7 +272,6 @@ const Feed = ({
                   projectName={projectName}
                   entityType={entityType}
                   onReferenceClick={handleRefClick}
-                  isSlideOut={isSlideOut}
                   createdAts={entities.map((e) => e.createdAt)}
                   onFileExpand={handleFileExpand}
                   showOrigin={entities.length > 1}
@@ -279,6 +285,9 @@ const Feed = ({
                   isHighlighted={highlighted.includes(activity.activityId)}
                   dispatch={dispatch}
                   scope={scope}
+                  statePath={statePath}
+                  readOnly={readOnly}
+                  statuses={statuses}
                 />
               ))}
           {/* message when no versions published */}
