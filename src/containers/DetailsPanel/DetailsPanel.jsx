@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import Feed from '@containers/Feed/Feed'
 import { useGetEntitiesDetailsPanelQuery } from '@queries/entity/getEntityPanel'
 import TaskAttributes from '@pages/UserDashboardPage/UserDashboardTasks/TaskAttributes/TaskAttributes'
-import { transformEntityData } from '@queries/userDashboard/userDashboardHelpers'
+import { getEntityDetailsData } from '@queries/userDashboard/userDashboardHelpers'
 import DetailsPanelFiles from './DetailsPanelFiles'
 import { closeSlideOut, updateDetailsPanelTab } from '@state/details'
 import { entityDetailsTypesSupported } from '@/services/userDashboard/userDashboardQueries'
@@ -39,6 +39,7 @@ const DetailsPanel = ({
   style = {},
   scope,
   isCompact = false,
+  onWatchersUpdate,
 }) => {
   const path = isSlideOut ? 'slideOut' : 'pinned'
   let selectedTab = useSelector((state) => state.details[path][scope].tab)
@@ -78,7 +79,6 @@ const DetailsPanel = ({
       skip: !entitiesToQuery.length || !entityDetailsTypesSupported.includes(entityType),
     },
   )
-
   // the entity changes then we close the slide out
   useEffect(() => {
     if (!isSlideOut) {
@@ -86,20 +86,8 @@ const DetailsPanel = ({
     }
   }, [originalArgs])
 
-  let entityDetailsData = []
   // merge current entities data with fresh details data
-  if (!isSuccess || isError) {
-    if (entities.length) entityDetailsData = entities.map(({ id }) => ({ id }))
-    else
-      entityDetailsData = entities.map((entity) =>
-        transformEntityData({
-          entity,
-          entityType,
-          projectName: entity.projectName,
-          projectInfo: projectsInfo[entity.projectName],
-        }),
-      )
-  } else entityDetailsData = detailsData
+  const entityDetailsData = getEntityDetailsData({ entities, entityType, projectsInfo, detailsData, isSuccess, isError })
 
   // get the first project name and info to be used in the feed.
   const firstProject = projectNames[0]
@@ -149,7 +137,12 @@ const DetailsPanel = ({
             entityType={entityType}
             scope={scope}
           />
-          <Watchers entities={entitiesToQuery} entityType={entityType} options={projectUsers} />
+          <Watchers
+            entities={entitiesToQuery}
+            entityType={entityType}
+            options={projectUsers}
+            onWatchersUpdate={onWatchersUpdate && onWatchersUpdate}
+          />
           {onClose && (
             <Button
               icon="close"

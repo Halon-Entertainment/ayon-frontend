@@ -3,8 +3,14 @@ import { Button, FileUpload, SaveButton } from '@ynput/ayon-react-components'
 import styled from 'styled-components'
 import api from '@api'
 import { useDispatch, useSelector } from 'react-redux'
-import { useCreateInstallerMutation, useUploadInstallersMutation } from '@queries/installers'
-import { useUploadDependencyPackagesMutation } from '@queries/dependencyPackages'
+import {
+  useCreateInstallerMutation,
+  useUploadInstallersMutation,
+} from '@queries/installers/updateInstallers'
+import {
+  useUploadDependencyPackagesMutation,
+  useCreateDependencyPackageMutation,
+} from '@queries/dependencyPackages/updateDependencyPackages'
 import { onUploadFinished, onUploadProgress } from '@state/context'
 import axios from 'axios'
 
@@ -38,7 +44,15 @@ const StyledProgressBar = styled.hr`
   transition: width 0.3s;
 `
 
-const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props }) => {
+const AddonUpload = ({
+  onClose,
+  type = 'addon',
+  onInstall,
+  dropOnly,
+  abortController,
+  onUploadStateChange,
+  ...props
+}) => {
   const dispatch = useDispatch()
   const [files, setFiles] = useState([])
   const [isUploading, setIsUploading] = useState(false)
@@ -46,14 +60,19 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
   const [errorMessage, setErrorMessage] = useState(null)
   const progress = useSelector((state) => state.context.uploadProgress)
 
+  // Wrapping state callback to sync the parent uploading state
+  const toggleIsUploading = (value) => {
+    setIsUploading(value)
+    onUploadStateChange(value)
+  }
+
   // installers
   const [createInstaller] = useCreateInstallerMutation()
   const [uploadInstallers] = useUploadInstallersMutation()
   // upload packages
+  const [createPackage] = useCreateDependencyPackageMutation()
   const [uploadPackages] = useUploadDependencyPackagesMutation()
 
-  let endPoint = 'installers'
-  if (type === 'package') endPoint = 'dependencyPackages'
   const typeLabel =
     type === 'package' ? 'Dependency Package' : type === 'addon' ? 'Addon' : 'Installer'
 
@@ -79,13 +98,14 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
           }
         })
         // Use the data object here
-        // create installer with json data
-        await createInstaller({ data, endPoint }).unwrap()
+        if (type === 'package') await createPackage({ dependencyPackage: data }).unwrap()
+        if (type === 'installer') await createInstaller({ installer: data }).unwrap()
       }
 
       console.log('finished: created ' + type)
       return true
     } catch (error) {
+      toggleIsUploading(false)
       setErrorMessage(error?.data?.detail)
       console.error(error)
       return false
@@ -99,10 +119,18 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
     try {
       let success, res
       if (type === 'installer') {
-        res = await uploadInstallers({ files: filesToUpload, isNameEndpoint: true }).unwrap()
+        res = await uploadInstallers({
+          files: filesToUpload,
+          isNameEndpoint: true,
+          abortController,
+        }).unwrap()
         success = true
       } else if (type === 'package') {
-        res = await uploadPackages({ files: filesToUpload, isNameEndpoint: true }).unwrap()
+        res = await uploadPackages({
+          files: filesToUpload,
+          isNameEndpoint: true,
+          abortController,
+        }).unwrap()
         success = true
       } else success = false
 
@@ -132,12 +160,12 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
     }
 
     // start loading
-    setIsUploading(true)
+    toggleIsUploading(true)
     setIsComplete(false)
     setErrorMessage(null)
 
     const onError = () => {
-      setIsUploading(false)
+      toggleIsUploading(false)
       setIsComplete(true)
     }
 
@@ -171,7 +199,7 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
     //   message = type + 's uploaded'
     // }
 
-    setIsUploading(false)
+    toggleIsUploading(false)
     setIsComplete(true)
 
     setFiles([])
@@ -179,13 +207,12 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
     onInstall(type)
   }
 
-  const abortController = new AbortController()
   const cancelToken = axios.CancelToken
   const cancelTokenSource = cancelToken.source()
 
   const handleAddonInstall = async () => {
     let index = 0
-    setIsUploading(true)
+    toggleIsUploading(true)
     try {
       for (const file of files) {
         const opts = {
@@ -204,7 +231,7 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
         await axios.post('/api/addons/install', file.file, opts)
         index++
       }
-      setIsUploading(false)
+      toggleIsUploading(false)
       setIsComplete(true)
 
       setFiles([])
@@ -214,7 +241,7 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
       dispatch(api.util.invalidateTags(['bundleList', 'addonList']))
     } catch (error) {
       console.log(error)
-      setIsUploading(false)
+      toggleIsUploading(false)
       setIsComplete(true)
       dispatch(onUploadFinished())
       setErrorMessage('ERROR: ' + error?.response?.data?.detail)
@@ -264,8 +291,9 @@ const AddonUpload = ({ onClose, type = 'addon', onInstall, dropOnly, ...props })
             {message}
             {isUploading && <StyledProgressBar $progress={progress} />}
             <div>
-              {onClose && <Button onClick={onClose} label="Close" />}
+              {onClose && <Button onClick={onClose} label="Cancel" />}
               <SaveButton
+                disabled={isUploading}
                 active={files.length}
                 label="Upload"
                 onClick={handleSubmit}

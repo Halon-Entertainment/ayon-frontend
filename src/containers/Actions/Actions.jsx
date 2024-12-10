@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { useExecuteActionMutation, useGetActionsFromContextQuery } from '@/services/actions/actions'
 import ActionsDropdown from '@/components/ActionsDropdown/ActionsDropdown'
 import ActionIcon from './ActionIcon'
+import customProtocolCheck from 'custom-protocol-check'
 
 const placeholder = {
   identifier: 'placeholder',
@@ -137,9 +138,12 @@ const Actions = ({ entities, entityType, entitySubTypes, isLoadingEntity }) => {
     return tempFeaturedActions
   }, [actions, groupedActions, placeholder])
 
-  const [executeAction] = useExecuteActionMutation()
+  const [executeAction, { isLoading: isLoadingExecution, originalArgs }] =
+    useExecuteActionMutation()
+  const executingAction = isLoadingExecution && originalArgs?.identifier
 
-  const handleExecuteAction = async (identifier) => {
+  const handleExecuteAction = async (identifier, e) => {
+    e?.preventDefault()
     const action = actions.find((option) => option.identifier === identifier)
 
     const params = {
@@ -156,7 +160,12 @@ const Actions = ({ entities, entityType, entitySubTypes, isLoadingEntity }) => {
 
       toast.success(response?.message || 'Action executed successfully')
       if (response?.uri) {
-        window.location.href = response.uri
+        customProtocolCheck(
+          response.uri,
+          () => {},
+          () => {},
+          2000,
+        )
       }
     } catch (error) {
       console.warn('Error executing action', error)
@@ -180,9 +189,9 @@ const Actions = ({ entities, entityType, entitySubTypes, isLoadingEntity }) => {
           })}
           data-tooltip={action.label}
           disabled={action.isPlaceholder}
-          onClick={() => handleExecuteAction(action.identifier)}
+          onClick={(e) => handleExecuteAction(action.identifier, e)}
         >
-          <ActionIcon icon={action.icon} />
+          <ActionIcon icon={action.icon} isExecuting={executingAction === action.identifier} />
         </Styled.FeaturedAction>
       ))}
       <ActionsDropdown

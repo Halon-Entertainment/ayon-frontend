@@ -14,7 +14,7 @@ import {
 import { TreeTable } from 'primereact/treetable'
 import { Column } from 'primereact/column'
 
-import sortByKey from '@helpers/sortByKey'
+import { sortByLabelAndName } from '@helpers/sortByHelpers'
 
 import { editorSelectionChanged, setUri, setExpandedFolders } from '@state/context'
 
@@ -37,7 +37,7 @@ import {
   onNewChanges,
   onRevert,
 } from '@state/editor'
-import EditorPanel from './EditorPanel'
+import EditorPanel from './EditorPanel/EditorPanel'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
 import NameField from './fields/NameField'
 import { useGetAttributesQuery } from '@queries/attributes/getAttributes'
@@ -477,21 +477,24 @@ const EditorPage = () => {
         const node = {
           key: childId,
           name: rootData[childId].data?.name,
-          data: rootData[childId].data,
+          data: {
+            ...rootData[childId].data,
+            labelThenName: rootData[childId].data.label || rootData[childId].data.name,
+          },
           leaf: rootData[childId].leaf,
         }
         if (!node.leaf) {
           node.children = []
           if (childId in expandedFolders) buildHierarchy(childId, node.children)
           // sort children by name
-          node.children = sortByKey(node.children, 'name')
+          node.children = sortByLabelAndName(node.children)
         }
         target.push(node)
       }
     }
 
     buildHierarchy('root', result)
-    return sortByKey(result, 'name')
+    return sortByLabelAndName(result)
   }, [parents, expandedFolders, rootData, projectName])
 
   let foundTasks = []
@@ -1619,7 +1622,7 @@ const EditorPage = () => {
   let allColumns = useMemo(
     () => [
       <Column
-        field="name"
+        field="labelThenName"
         key="name"
         header="Name"
         expander={true}
@@ -1684,7 +1687,7 @@ const EditorPage = () => {
 
   // only filter columns if required
   if (shownColumns.length < allColumns.length) {
-    allColumns = allColumns.filter(({ props }) => shownColumns.includes(props.field))
+    allColumns = allColumns.filter(({ key }) => shownColumns.includes(key))
   }
 
   // filter nodes that are undefined for editor

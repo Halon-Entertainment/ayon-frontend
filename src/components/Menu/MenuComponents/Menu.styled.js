@@ -141,7 +141,7 @@ export const Item = styled.li`
     display: inline-block;
   }
 
-  :hover {
+  &:hover {
     background-color: var(--md-sys-color-surface-container-highest);
   }
 
@@ -191,6 +191,17 @@ export const Item = styled.li`
       .icon {
         color: var(--md-sys-color-on-error-container);
       }
+    }
+  }
+
+  &.dev {
+    &,
+    .icon {
+      color: var(--color-hl-developer);
+    }
+
+    &:hover {
+      background-color: var(--color-hl-developer-container-hover);
     }
   }
 `
