@@ -6,7 +6,16 @@ const userSlice = createSlice({
   initialState: {
     name: '',
     data: {
-      frontendPreferences: {},
+      frontendPreferences: {
+        notifications: false,
+        notificationSound: false,
+        pinnedProjects: [],
+        expandedAccessGroups: {},
+        filters: {},
+      },
+      isAdmin: false,
+      isManager: false,
+      isUser: true,
     },
     attrib: {
       fullName: '',

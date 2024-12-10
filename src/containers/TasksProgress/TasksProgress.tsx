@@ -7,22 +7,47 @@ import {
   getStatusChangeOperations,
   getAssigneesChangeOperations,
   resolveShiftSelect,
+  getPriorityChangeOperations,
+  getPlaceholderMessage,
 } from './helpers'
+import { useRootFolders } from './hooks'
 import { useGetAllProjectUsersAsAssigneeQuery } from '@queries/user/getUsers'
 import { FolderType, Status, TaskType } from '@api/rest/project'
-import { ProgressSearch, TaskFieldChange, TasksProgressTable } from './components'
+import { TaskFieldChange, TasksProgressTable } from './components'
 // state
 import { setFocusedTasks } from '@state/context'
 import { useDispatch } from 'react-redux'
 import { useUpdateEntitiesMutation } from '@queries/entity/updateEntity'
 import { toast } from 'react-toastify'
 import { Button, Section, ShortcutTag, Spacer, Toolbar } from '@ynput/ayon-react-components'
-import CategorySelect from '@components/CategorySelect/CategorySelect'
-import useLocalStorage from '@hooks/useLocalStorage'
 import Shortcuts from '@containers/Shortcuts'
 import { openViewer } from '@state/viewer'
 import EmptyPlaceholder from '@components/EmptyPlaceholder/EmptyPlaceholder'
 import './styles.scss'
+import { AttributeEnumItem } from '@api/rest/attributes'
+import { Filter } from '@components/SearchFilter/types'
+import SearchFilterWrapper from '@components/SearchFilter/SearchFilterWrapper'
+import formatFilterAttributesData from './helpers/formatFilterAttributesData'
+import formatFilterTagsData from './helpers/formatFilterTagsData'
+import { useAppSelector } from '@state/store'
+import { useSetFrontendPreferencesMutation } from '@queries/user/updateUser'
+import { FilterFieldType } from '@hooks/useBuildFilterOptions'
+import formatFilterAssigneesData from './helpers/formatFilterAssigneesData'
+import { selectProgress } from '@state/progress'
+import { SelectionData, SliceType, useSlicerContext } from '@context/slicerContext'
+import useFilterBySlice from './hooks/useFilterBySlice'
+import formatSearchQueryFilters from './helpers/formatSearchQueryFilters'
+import { isEmpty } from 'lodash'
+import { RowSelectionState } from '@tanstack/react-table'
+
+// what to search by
+const searchFilterTypes: FilterFieldType[] = [
+  'attributes',
+  'entitySubType',
+  'status',
+  'assignees',
+  'tags',
+]
 
 export type Operation = {
   id: string
@@ -35,6 +60,7 @@ interface TasksProgressProps {
   statuses?: Status[]
   taskTypes?: TaskType[]
   folderTypes?: FolderType[]
+  priorities?: AttributeEnumItem[]
   projectName: string
 }
 
@@ -42,17 +68,84 @@ const TasksProgress: FC<TasksProgressProps> = ({
   statuses = [],
   taskTypes = [],
   folderTypes = [],
+  priorities = [],
   projectName,
 }) => {
   const dispatch = useDispatch()
   const tableRef = useRef<any>(null)
 
-  // filter states
-  const [filteredFolderIds, setFilteredFolderIds] = useState<null | string[]>(null)
-  const [filteredTaskTypes, setFilteredTaskTypes] = useLocalStorage(
-    `progress-types-${projectName}`,
-    [],
+  // FILTERS
+  //
+  //
+  const userName = useAppSelector((state) => state.user.name)
+  const frontendPreferences = useAppSelector((state) => state.user.data.frontendPreferences)
+  const frontendPreferencesFilters: {
+    [page: string]: {
+      [projectName: string]: Filter[]
+    }
+  } = frontendPreferences?.filters
+  const pageFilters = frontendPreferencesFilters?.progress ?? {}
+  const filters = pageFilters[projectName] ?? []
+
+  const [updateUserPreferences] = useSetFrontendPreferencesMutation()
+
+  const setFilters = (value: Filter[]) => {
+    const updatedPageFilters = { ...pageFilters, [projectName]: value }
+    const updatedUserFilters = { ...frontendPreferencesFilters, progress: updatedPageFilters }
+    const updatedFrontendPreferences = { ...frontendPreferences, filters: updatedUserFilters }
+    updateUserPreferences({ userName, patchData: updatedFrontendPreferences })
+  }
+
+  // filter out by slice
+  const { rowSelection, sliceType, setPersistentRowSelectionData, persistentRowSelectionData } =
+    useSlicerContext()
+  const persistedHierarchySelection = isEmpty(persistentRowSelectionData)
+    ? null
+    : persistentRowSelectionData
+  const { filter: sliceFilter } = useFilterBySlice()
+
+  const handleFiltersChange = (value: Filter[]) => {
+    setFilters(value)
+
+    // check if we need to remove the hierarchy filter and clear hierarchy selection
+    if (!value.some((filter) => filter.id === 'hierarchy')) {
+      setPersistentRowSelectionData({})
+    }
+  }
+
+  // if the sliceFilter is not hierarchy and hierarchy is not empty
+  // add the hierarchy to the filters as disabled
+  const filtersWithHierarchy = useMemo(() => {
+    const buildHierarchyFilterOption = (hierarchy: SelectionData): Filter => ({
+      id: 'hierarchy',
+      label: 'Folder',
+      type: 'list_of_strings',
+      values: Object.values(hierarchy).map((item) => ({
+        id: item.id,
+        label: item.label || item.name || item.id,
+      })),
+      isCustom: true,
+      singleSelect: true,
+      fieldType: 'folder',
+      operator: 'OR',
+      isReadonly: true,
+    })
+
+    if (sliceFilter && persistedHierarchySelection) {
+      return [buildHierarchyFilterOption(persistedHierarchySelection), ...filters]
+    }
+    return filters
+  }, [sliceFilter, persistedHierarchySelection, filters])
+
+  // build the graphql query filters
+  const queryFilters = useMemo(
+    () => formatSearchQueryFilters(filters, sliceFilter),
+    [filters, sliceFilter],
   )
+
+  //
+  //
+  // FILTERS
 
   // should rows be expanded (unless in collapsedRows)
   const [expandAll, setExpandAll] = useState(false)
@@ -64,13 +157,37 @@ const TasksProgress: FC<TasksProgressProps> = ({
   // hide parent folder child rows
   const [collapsedParents, setCollapsedParents] = useState<string[]>([])
 
-  const selectedFolders = useSelector((state: $Any) => state.context.focused.folders) as string[]
   const selectedTasks = useSelector((state: $Any) => state.context.focused.tasks) as string[]
   const [activeTask, setActiveTask] = useState<string | null>(null)
   //   GET PROJECT ASSIGNEES
   const { data: users = [] } = useGetAllProjectUsersAsAssigneeQuery(
     { projectName },
     { skip: !projectName },
+  )
+
+  // when the slice type is not hierarchy we need to get the root folders
+  const rootFolderIds = useRootFolders({ sliceType, projectName })
+
+  const resolveSelectedFolders = (
+    rowSelection: RowSelectionState,
+    persistedHierarchySelection: SelectionData | null,
+    rootFolderIds: string[],
+    sliceType: SliceType,
+  ): string[] => {
+    if (sliceType === 'hierarchy') {
+      return Object.keys(rowSelection)
+    } else if (persistedHierarchySelection) {
+      return Object.keys(persistedHierarchySelection)
+    } else {
+      return rootFolderIds
+    }
+  }
+
+  const folderIdsToFetch = resolveSelectedFolders(
+    rowSelection,
+    persistedHierarchySelection,
+    rootFolderIds,
+    sliceType,
   )
 
   // VVV MAIN QUERY VVV
@@ -82,8 +199,18 @@ const TasksProgress: FC<TasksProgressProps> = ({
     isFetching: isFetchingTasks,
     error,
   } = useGetTasksProgressQuery(
-    { projectName, folderIds: selectedFolders },
-    { skip: !selectedFolders.length || !projectName },
+    {
+      projectName,
+      folderIds: folderIdsToFetch,
+      assignees: queryFilters.assignees,
+      assigneesAny: queryFilters.assigneesAny,
+      tags: queryFilters.tags,
+      tagsAny: queryFilters.tagsAny,
+      taskTypes: queryFilters.taskTypes,
+      statuses: queryFilters.statuses,
+      attributes: queryFilters.attributes,
+    },
+    { skip: !folderIdsToFetch.length || !projectName },
   )
   //
   //
@@ -115,25 +242,36 @@ const TasksProgress: FC<TasksProgressProps> = ({
     return Array.from(assignees)
   }, [selectedTasksData])
 
+  // FILTERS
+  //
+  //
+  // format attributes data for the search filter (show value suggestions)
+  const filterAttributesData = useMemo(
+    () => formatFilterAttributesData(foldersTasksData),
+    [foldersTasksData],
+  )
+
+  // format tags data for the search filter
+  const filterTagsData = useMemo(() => formatFilterTagsData(foldersTasksData), [foldersTasksData])
+
+  // format tags data for the search filter
+  const filterAssigneesData = useMemo(
+    () => formatFilterAssigneesData(foldersTasksData),
+    [foldersTasksData],
+  )
+
+  //
+  //
+  // FILTERS
+
   const tableData = useMemo(
     () =>
-      formatTaskProgressForTable(foldersTasksData, filteredTaskTypes, collapsedParents, {
+      formatTaskProgressForTable(foldersTasksData, collapsedParents, {
         folderTypes,
         statuses,
       }),
-    [foldersTasksData, filteredTaskTypes, collapsedParents],
+    [foldersTasksData, collapsedParents],
   )
-
-  const filteredTableData = useMemo(() => {
-    let filtered = tableData
-
-    // search filter
-    if (filteredFolderIds) {
-      filtered = tableData.filter((row) => filteredFolderIds.includes(row.__folderId))
-    }
-
-    return filtered
-  }, [tableData, filteredFolderIds])
 
   const [updateEntities] = useUpdateEntitiesMutation()
 
@@ -156,6 +294,9 @@ const TasksProgress: FC<TasksProgressProps> = ({
       case 'assignee':
         operations = getAssigneesChangeOperations(selectedTasksData, projectName, added, removed)
         break
+      case 'priority':
+        operations = getPriorityChangeOperations(selectedTasksData, projectName, added[0])
+        break
       default:
         break
     }
@@ -173,9 +314,11 @@ const TasksProgress: FC<TasksProgressProps> = ({
       if (!tableEl) return
 
       const taskIds = resolveShiftSelect(id, tableEl)
+      // update main context focused tasks
 
       dispatch(setFocusedTasks({ ids: taskIds }))
-
+      // update progress state focused tasks (used for the details panel)
+      dispatch(selectProgress({ ids: taskIds, type: 'task' }))
       return
     }
 
@@ -195,7 +338,10 @@ const TasksProgress: FC<TasksProgressProps> = ({
 
     setActiveTask(newActiveId)
 
+    // update main context focused tasks
     dispatch(setFocusedTasks({ ids: newIds }))
+    // update progress state focused tasks (used for the details panel)
+    dispatch(selectProgress({ ids: newIds, type: 'task' }))
   }
 
   const handleExpandToggle = (folderId: string) => {
@@ -222,7 +368,7 @@ const TasksProgress: FC<TasksProgressProps> = ({
     setCollapsedRows(newCollapsedRows)
 
     if (!expandedRows.length && expandAll) {
-      const allTasksLength = filteredTableData.filter((row) => !row.__isParent).length
+      const allTasksLength = tableData.filter((row) => !row.__isParent).length
       if (allTasksLength === newCollapsedRows.length) {
         setExpandAll(false)
       }
@@ -263,48 +409,47 @@ const TasksProgress: FC<TasksProgressProps> = ({
 
   return (
     <>
+      {/* @ts-ignore */}
       <Shortcuts shortcuts={shortcuts} deps={[expandedRows]} />
       <Section style={{ height: '100%' }} direction="column">
         <Toolbar>
-          <ProgressSearch data={tableData} onSearch={setFilteredFolderIds} />
-          <CategorySelect
-            value={filteredTaskTypes}
-            options={taskTypes.map((taskType) => ({
-              value: taskType.name,
-              label: taskType.name,
-              icon: taskType.icon,
-            }))}
-            onChange={(value) => setFilteredTaskTypes(value)}
-            onClearNull={filteredTaskTypes.length ? () => setFilteredTaskTypes([]) : undefined}
-            multiSelectClose={false}
-            onSelectAll={() => {}}
-            multiSelect
-            placeholder="Filter task types..."
-            style={{ width: 185 }}
+          <SearchFilterWrapper
+            filters={filtersWithHierarchy}
+            onChange={handleFiltersChange}
+            filterTypes={searchFilterTypes}
+            projectNames={[projectName]}
+            scope="task"
+            data={{
+              tags: filterTagsData,
+              attributes: filterAttributesData,
+              assignees: filterAssigneesData,
+            }}
+            disabledFilters={sliceType ? [sliceType] : []}
           />
           <Spacer />
           <Button
             onClick={handleExpandAllToggle}
             icon={expandAll ? 'collapse_all' : 'expand_all'}
-            style={{ width: 220, justifyContent: 'flex-start' }}
+            style={{ minWidth: 220, justifyContent: 'flex-start' }}
             selected={expandAll}
           >
             {`${expandAll ? 'Collapse' : 'Expand'} all rows`}
             <ShortcutTag style={{ marginLeft: 'auto' }}>Shift + E</ShortcutTag>
           </Button>
         </Toolbar>
-        {selectedFolders.length ? (
-          filteredTableData.length || isFetchingTasks ? (
+        {folderIdsToFetch.length ? (
+          tableData.length || isFetchingTasks ? (
             <TasksProgressTable
               tableRef={tableRef}
-              tableData={filteredTableData}
+              tableData={tableData}
               projectName={projectName}
               isLoading={isFetchingTasks}
-              selectedFolders={selectedFolders}
+              selectedFolders={folderIdsToFetch}
               activeTask={activeTask}
               selectedAssignees={selectedAssignees}
               statuses={statuses} // status icons etc.
               taskTypes={taskTypes} // for tasks icon etc.
+              priorities={priorities} // for priority icons and colors
               users={users}
               onChange={handleTaskFieldChange}
               onSelection={handleTaskSelect}
@@ -317,14 +462,7 @@ const TasksProgress: FC<TasksProgressProps> = ({
               onCollapseRow={handleCollapseToggle}
             />
           ) : (
-            <EmptyPlaceholder
-              message={
-                filteredFolderIds
-                  ? ' No results found. Try a different search.'
-                  : 'No tasks under this folder. Try selecting another one.'
-              }
-              icon="folder_open"
-            />
+            <EmptyPlaceholder message={getPlaceholderMessage(sliceType)} icon="folder_open" />
           )
         ) : (
           <EmptyPlaceholder

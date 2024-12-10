@@ -481,6 +481,30 @@
             "deprecationReason": null
           },
           {
+            "name": "reactions",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ActivityReactionNode",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "read",
             "description": null,
             "args": [],
@@ -679,8 +703,80 @@
         "possibleTypes": null
       },
       {
+        "kind": "OBJECT",
+        "name": "ActivityReactionNode",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "fullName",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "reaction",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "timestamp",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "DateTime",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "userName",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "INPUT_OBJECT",
-        "name": "AtrributeFilterInput",
+        "name": "AttributeFilterInput",
         "description": null,
         "isOneOf": false,
         "fields": null,
@@ -1655,6 +1751,18 @@
             "deprecationReason": null
           },
           {
+            "name": "priority",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "resolutionHeight",
             "description": "Vertical resolution",
             "args": [],
@@ -2619,7 +2727,7 @@
               },
               {
                 "name": "assignees",
-                "description": "List of assignees to filter by",
+                "description": "List tasks with all of the provided assignees. Empty list will return tasks with no assignees.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -2639,7 +2747,7 @@
               },
               {
                 "name": "assigneesAny",
-                "description": "List tasks with any of the selected assignees",
+                "description": "List tasks with any of the provided assignees. Empty list will return tasks with any assignees.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -2668,7 +2776,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "AtrributeFilterInput",
+                      "name": "AttributeFilterInput",
                       "ofType": null
                     }
                   }
@@ -2835,7 +2943,27 @@
               },
               {
                 "name": "tags",
-                "description": "List of tags to filter by",
+                "description": "List tasks with all of the provided tags.Empty list will return tasks with no tags.",
+                "type": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
+                  }
+                },
+                "defaultValue": "null",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "tagsAny",
+                "description": "List tasks with any of the provided tags.Empty list will return tasks with any tags.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -3485,6 +3613,18 @@
                 "name": "String",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "priority",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -5031,6 +5171,18 @@
             "deprecationReason": null
           },
           {
+            "name": "priority",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "resolutionHeight",
             "description": "Vertical resolution",
             "args": [],
@@ -5213,6 +5365,30 @@
               {
                 "name": "before",
                 "description": "Pagination: before",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                },
+                "defaultValue": "null",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "changedAfter",
+                "description": null,
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                },
+                "defaultValue": "null",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "changedBefore",
+                "description": null,
                 "type": {
                   "kind": "SCALAR",
                   "name": "String",
@@ -5512,7 +5688,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "AtrributeFilterInput",
+                      "name": "AttributeFilterInput",
                       "ofType": null
                     }
                   }
@@ -6466,7 +6642,7 @@
               },
               {
                 "name": "assignees",
-                "description": "List of assignees to filter by",
+                "description": "List tasks with all of the provided assignees. Empty list will return tasks with no assignees.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -6486,7 +6662,7 @@
               },
               {
                 "name": "assigneesAny",
-                "description": "List tasks with any of the selected assignees",
+                "description": "List tasks with any of the provided assignees. Empty list will return tasks with any assignees.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -6515,7 +6691,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "INPUT_OBJECT",
-                      "name": "AtrributeFilterInput",
+                      "name": "AttributeFilterInput",
                       "ofType": null
                     }
                   }
@@ -6682,7 +6858,27 @@
               },
               {
                 "name": "tags",
-                "description": "List of tags to filter by",
+                "description": "List tasks with all of the provided tags.Empty list will return tasks with no tags.",
+                "type": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
+                  }
+                },
+                "defaultValue": "null",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "tagsAny",
+                "description": "List tasks with any of the provided tags.Empty list will return tasks with any tags.",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -7527,7 +7723,27 @@
               },
               {
                 "name": "states",
-                "description": "List of states",
+                "description": "List of states (deprecated. use statuses)",
+                "type": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
+                  }
+                },
+                "defaultValue": "null",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "statuses",
+                "description": "List of statuses",
                 "type": {
                   "kind": "LIST",
                   "name": null,
@@ -9010,6 +9226,18 @@
             "type": {
               "kind": "SCALAR",
               "name": "Float",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "priority",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
               "ofType": null
             },
             "isDeprecated": false,
@@ -13323,11 +13551,7 @@
         "name": "include",
         "description": "Directs the executor to include this field or fragment only when the `if` argument is true.",
         "isRepeatable": false,
-        "locations": [
-          "FIELD",
-          "FRAGMENT_SPREAD",
-          "INLINE_FRAGMENT"
-        ],
+        "locations": ["FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"],
         "args": [
           {
             "name": "if",
@@ -13351,11 +13575,7 @@
         "name": "skip",
         "description": "Directs the executor to skip this field or fragment when the `if` argument is true.",
         "isRepeatable": false,
-        "locations": [
-          "FIELD",
-          "FRAGMENT_SPREAD",
-          "INLINE_FRAGMENT"
-        ],
+        "locations": ["FIELD", "FRAGMENT_SPREAD", "INLINE_FRAGMENT"],
         "args": [
           {
             "name": "if",
@@ -13377,15 +13597,13 @@
       },
       {
         "name": "specifiedBy",
-        "description": "Exposes a URL that specifies the behaviour of this scalar.",
+        "description": "Exposes a URL that specifies the behavior of this scalar.",
         "isRepeatable": false,
-        "locations": [
-          "SCALAR"
-        ],
+        "locations": ["SCALAR"],
         "args": [
           {
             "name": "url",
-            "description": "The URL that specifies the behaviour of this scalar.",
+            "description": "The URL that specifies the behavior of this scalar.",
             "type": {
               "kind": "NON_NULL",
               "name": null,

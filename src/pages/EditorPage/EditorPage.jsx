@@ -22,7 +22,7 @@ import { getColumns, formatType, formatAttribute, formatAssignees, formatStatus 
 import { MultiSelect } from 'primereact/multiselect'
 import useLocalStorage from '@hooks/useLocalStorage'
 import { useGetFolderHierarchyQuery } from '@queries/getHierarchy'
-import SearchDropdown from '@components/SearchDropdown'
+import SearchDropdown from '@components/SearchDropdown/SearchDropdown'
 import useColumnResize from '@hooks/useColumnResize'
 import { capitalize, debounce, isEmpty } from 'lodash'
 import { useLazyGetExpandedBranchQuery } from '@queries/editor/getEditor'
@@ -40,7 +40,7 @@ import {
 import EditorPanel from './EditorPanel/EditorPanel'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
 import NameField from './fields/NameField'
-import { useGetAttributesQuery } from '@queries/attributes/getAttributes'
+import { useGetAttributeListQuery } from '@queries/attributes/getAttributes'
 import NewEntity from './NewEntity'
 import checkName from '@helpers/checkName'
 import useCreateContext from '@hooks/useCreateContext'
@@ -79,7 +79,7 @@ const EditorPage = () => {
 
   // get attrib fields
   // pass editor: true so that it uses different cache.
-  let { data: attribsData = [] } = useGetAttributesQuery({}, { refetchOnMountOrArgChange: true })
+  let { data: attribsData = [] } = useGetAttributeListQuery({}, { refetchOnMountOrArgChange: true })
 
   // get project attribs values (for root inherited attribs)
   const { data: projectAnatomyData } = useGetProjectAnatomyQuery(
@@ -1828,12 +1828,13 @@ const EditorPage = () => {
             style={{ maxWidth: 200 }}
           />
           <SearchDropdown
-            filter={searchFilter}
             suggestions={searchableFolders}
             suggestionsLimit={5}
+            isLoading={isSearchLoading}
+            placeholder="Filter folders & tasks..."
+            filter={searchFilter}
             onSubmit={handleSearchComplete}
             onClear={() => searchIds && setSearchIds({})}
-            isLoading={isSearchLoading}
           />
           <Spacer />
           <Button
@@ -1903,7 +1904,7 @@ const EditorPage = () => {
           <SplitterPanel size={30} minSize={30}>
             <EditorPanel
               editorMode
-              nodes={editorNodes}
+              parentEditorNodes={editorNodes}
               onChange={(c) => throttledEditorChanges(c)}
               onDelete={() => onDelete(currentSelection)}
               onRevert={() => revertChangesOnSelection(currentSelection)}

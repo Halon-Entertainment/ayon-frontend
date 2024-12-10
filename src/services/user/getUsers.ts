@@ -1,7 +1,11 @@
 import api from '@api'
 import ayonClient from '@/ayon'
 import { $Any } from '@types'
-import { GetAllProjectUsersAsAssigneeQuery } from '@api/graphql'
+import {
+  GetActiveUsersCountQuery,
+  GetAllAssigneesQuery,
+  GetAllProjectUsersAsAssigneeQuery,
+} from '@api/graphql'
 
 const USER_BY_NAME_QUERY = `
   query UserList($name:String!) {
@@ -93,13 +97,6 @@ const buildUsersQuery = (QUERY: string) => {
 
 const injectedApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getUsersList: build.query({
-      query: () => ({
-        url: '/api/users',
-      }),
-      transformResponse: (res: $Any) => res?.data?.users.edges.map((e: $Any) => e.node),
-      providesTags: () => ['user', { type: 'user', id: 'LIST' }],
-    }),
     getUsers: build.query({
       query: () => ({
         url: '/graphql',
@@ -109,7 +106,7 @@ const injectedApi = api.injectEndpoints({
           variables: {},
         },
       }),
-      transformResponse: (res: $Any, meta, { selfName }) => {
+      transformResponse: (res: $Any, _meta, { selfName }) => {
         if (res?.errors) {
           console.log(res.errors)
           throw new Error(res.errors[0].message)
@@ -134,7 +131,7 @@ const injectedApi = api.injectEndpoints({
       query: ({ name }) => ({
         url: `/api/users/${name}`,
       }),
-      providesTags: (res, g, { name }) => [
+      providesTags: (_res, _g, { name }) => [
         { type: 'user', id: name },
         { type: 'user', id: 'LIST' },
       ],
@@ -201,16 +198,17 @@ const injectedApi = api.injectEndpoints({
         url: `/api/users/${name}/sessions`,
       }),
       transformResponse: (res: $Any) => res?.sessions,
-      providesTags: (res, g, { token }) => [{ type: 'session', id: token }],
+      providesTags: (_res, _g, { token }) => [{ type: 'session', id: token }],
     }),
   }),
   overrideExisting: true,
 })
 
 type AssigneeNode = GetAllProjectUsersAsAssigneeQuery['users']['edges'][0]['node']
-export type GetAllProjectUsersAsAssigneeResult = {
+export type Assignees = {
   name: AssigneeNode['name']
   fullName: AssigneeNode['attrib']['fullName']
+  updatedAt: AssigneeNode['updatedAt']
 }[]
 
 import { DefinitionsFromApi, OverrideResultType, TagTypesFromApi } from '@reduxjs/toolkit/query'
@@ -220,15 +218,38 @@ type TagTypes = TagTypesFromApi<typeof api>
 type UpdatedDefinitions = Omit<Definitions, 'GetAllProjectUsersAsAssignee'> & {
   GetAllProjectUsersAsAssignee: OverrideResultType<
     Definitions['GetAllProjectUsersAsAssignee'],
-    GetAllProjectUsersAsAssigneeResult
+    Assignees
   >
+  GetActiveUsersCount: OverrideResultType<Definitions['GetActiveUsersCount'], number>
+  GetAllAssignees: OverrideResultType<Definitions['GetAllAssignees'], Assignees>
 }
 
 const enhancedApi = injectedApi.enhanceEndpoints<TagTypes, UpdatedDefinitions>({
   endpoints: {
     GetAllProjectUsersAsAssignee: {
       transformResponse: (res: GetAllProjectUsersAsAssigneeQuery) =>
-        res.users.edges.map((e) => ({ name: e.node.name, fullName: e.node.attrib.fullName })),
+        res.users.edges.map((e) => ({
+          name: e.node.name,
+          fullName: e.node.attrib.fullName,
+          updatedAt: e.node.updatedAt,
+        })),
+      providesTags: (res) =>
+        res
+          ? [{ type: 'user', id: 'LIST' }, ...res.map((e) => ({ type: 'user', id: e.name }))]
+          : [{ type: 'user', id: 'LIST' }],
+    },
+    GetActiveUsersCount: {
+      transformResponse: (res: GetActiveUsersCountQuery) =>
+        res.users.edges.filter((e) => e.node.active && !e.node.isGuest).length,
+      providesTags: [{ type: 'user', id: 'LIST' }],
+    },
+    GetAllAssignees: {
+      transformResponse: (res: GetAllAssigneesQuery) =>
+        res.users.edges.map((e) => ({
+          name: e.node.name,
+          fullName: e.node.attrib.fullName,
+          updatedAt: e.node.updatedAt,
+        })),
       providesTags: (res) =>
         res
           ? [{ type: 'user', id: 'LIST' }, ...res.map((e) => ({ type: 'user', id: e.name }))]
@@ -239,7 +260,6 @@ const enhancedApi = injectedApi.enhanceEndpoints<TagTypes, UpdatedDefinitions>({
 
 export const {
   useGetUsersQuery,
-  useGetUsersListQuery,
   useGetUserByNameQuery,
   useGetUserQuery,
   useLazyGetUserQuery,
@@ -247,4 +267,7 @@ export const {
   useGetMeQuery,
   useGetUserSessionsQuery,
   useGetAllProjectUsersAsAssigneeQuery,
+  useLazyGetAllProjectUsersAsAssigneeQuery,
+  useGetActiveUsersCountQuery,
+  useGetAllAssigneesQuery,
 } = enhancedApi

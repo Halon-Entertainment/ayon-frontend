@@ -67,7 +67,7 @@ const getInitialForm = (
       label: 'Assignees',
       field: 'assignees',
       disabled: !types.includes('task'),
-      placeholder: `Folders Can Not Have Assignees...`,
+      placeholder: `Folders can not have assignees`,
       ...assigneesValues,
     },
     _tags: {
@@ -84,29 +84,37 @@ const hasChanged = (
   field: string,
   changeKey: string,
   newValue: string | null,
-  { nodes, nodeIds }: { nodes: $Any; nodeIds: string[] },
+  { nodes, nodeIds, isAttribute }: { nodes: $Any; nodeIds: string[]; isAttribute: boolean },
 ) => {
-  if (!oldValueObj?.multipleValues && !oldValueObj?.__new) {
-    for (const id of nodeIds) {
-      const ogValue = getFieldInObject(field, nodes[id]?.data)
+  // Original condition, doesn't make much sense??
+  /*
+  if (!oldValueObj?.multipleValues) {
+    return true
+  }
+  */
+  if (oldValueObj?.__new) {
+    return true
+  }
 
-      // if value undefined or it's a new node skip
-      // (always changed)
-      if (!ogValue || nodes[id]?.__new) {
-        return true
-      }
+  for (const id of nodeIds) {
+    const ogValue = getFieldInObject(field, nodes[id]?.data)
 
-      // diff value or multipleValues
-      const ownValue = nodes[id]?.data.ownAttrib.includes(changeKey)
+    // if value undefined or it's a new node skip
+    // (always changed)
+    if (!ogValue || nodes[id]?.__new) {
+      return true
+    }
 
-      const isSame =
-        (!ownValue && (newValue === undefined || newValue === null || isEqual(newValue, []))) ||
-        (ownValue && isEqual(ogValue, newValue))
+    // diff value or multipleValues
+    const ownValue = !isAttribute || nodes[id]?.data.ownAttrib.includes(changeKey)
 
-      // stop looping if isChanged is ever true
-      if (!isSame) {
-        return true
-      }
+    const isSame =
+      (!ownValue && (newValue === undefined || newValue === null || isEqual(newValue, []))) ||
+      (ownValue && isEqual(ogValue, newValue))
+
+    // stop looping if isChanged is ever true
+    if (!isSame) {
+      return true
     }
   }
 
@@ -149,6 +157,18 @@ const getTypes = (nodes: $Any, nodeIds: string[]) => {
   return types
 }
 
+const getTypedValue = (attrib: Attrib, value?: string) => {
+  if (attrib.type == 'float') {
+    return parseFloat(value || '0')
+  }
+
+  if (attrib.type == 'integer') {
+    return parseInt(value || '0')
+  }
+
+  return value || ''
+}
+
 const getInputProps = (attrib: Attrib) => {
   const inputTypes = {
     datetime: { type: 'date' },
@@ -169,4 +189,4 @@ const getInputProps = (attrib: Attrib) => {
   return props
 }
 
-export { getInitialForm, getParentValue, getInputProps, getTypes, hasChanged }
+export { getInitialForm, getParentValue, getInputProps, getTypes, hasChanged, getTypedValue }

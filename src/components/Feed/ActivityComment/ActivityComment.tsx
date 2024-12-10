@@ -4,6 +4,8 @@ import ReactMarkdown from 'react-markdown'
 import { useSelector } from 'react-redux'
 import emoji from 'remark-emoji'
 import remarkGfm from 'remark-gfm'
+import remarkDirective from 'remark-directive'
+import remarkDirectiveRehype from 'remark-directive-rehype'
 
 import { UserModel } from '@api/rest/users'
 import CommentInput from '@components/CommentInput/CommentInput'
@@ -26,6 +28,9 @@ import * as Styled from './ActivityComment.styled'
 import CommentWrapper from './CommentWrapper'
 import { aTag, blockquoteTag, codeTag, inputTag } from './activityMarkdownComponents'
 import { mapGraphQLReactions } from './mappers'
+import { Icon } from '@ynput/ayon-react-components'
+import ActivityStatus from '../ActivityStatus/ActivityStatus'
+import { Status } from '@api/rest/project'
 
 type Props = {
   activity: $Any
@@ -37,12 +42,14 @@ type Props = {
   projectName: string
   entityType: string
   onReferenceClick: Function
-  isSlideOut: boolean
   onFileExpand: Function
   showOrigin: boolean
   isHighlighted: boolean
   dispatch: Function
   scope: string
+  statePath: string
+  readOnly: boolean
+  statuses: Status[]
 }
 
 const ActivityComment = ({
@@ -55,12 +62,14 @@ const ActivityComment = ({
   projectName,
   entityType,
   onReferenceClick,
-  isSlideOut,
   onFileExpand,
   showOrigin,
   isHighlighted,
   dispatch,
   scope,
+  statePath,
+  readOnly,
+  statuses = [],
 }: Props) => {
   let {
     body,
@@ -78,7 +87,7 @@ const ActivityComment = ({
   if (!authorName) authorName = author?.name || ''
   if (!authorFullName) authorFullName = author?.fullName || authorName
   let menuId = `comment-${scope}-${activity.activityId}`
-  if (isSlideOut) menuId += '-slideout'
+  if (statePath) menuId += '-' + statePath
   const isMenuOpen = useSelector((state: $Any) => state.context.menuOpen) === menuId
   const user = useSelector((state: $Any) => state.user) as UserModel
 
@@ -119,7 +128,7 @@ const ActivityComment = ({
   }
 
   const handleToggleMenu = (menu: $Any) => dispatch(toggleMenuOpen(menu))
-  const moreRef = useRef()
+  const moreRef = useRef<HTMLDivElement>(null)
 
   const [, setRefTooltip] = useReferenceTooltip({ dispatch })
 
@@ -154,6 +163,7 @@ const ActivityComment = ({
     <>
       <Styled.Comment
         className={clsx('comment', { isOwner, isMenuOpen, isEditing, isHighlighted })}
+        id={activityId}
       >
         <ActivityHeader
           name={authorName}
@@ -169,19 +179,20 @@ const ActivityComment = ({
           children={undefined}
         />
         <Styled.Body className={clsx('comment-body', { isEditing })}>
-          {/* @ts-ignore */}
-          <Styled.Tools className={'tools'} ref={moreRef}>
-            {isOwner && handleEditComment && (
-              <Styled.ToolButton icon="edit_square" onClick={handleEditComment} />
-            )}
-            {isOwner && (
-              <Styled.ToolButton
-                icon="more_horiz"
-                className="more"
-                onClick={() => handleToggleMenu(menuId)}
-              />
-            )}
-          </Styled.Tools>
+          {!readOnly && (
+            <Styled.Tools className={'tools'} ref={moreRef}>
+              {isOwner && handleEditComment && (
+                <Styled.ToolButton icon="edit_square" onClick={handleEditComment} />
+              )}
+              {isOwner && (
+                <Styled.ToolButton
+                  icon="more_horiz"
+                  className="more"
+                  onClick={() => handleToggleMenu(menuId)}
+                />
+              )}
+            </Styled.Tools>
+          )}
           {isEditing ? (
             // @ts-ignore
             <CommentInput
@@ -198,7 +209,7 @@ const ActivityComment = ({
             <>
               <CommentWrapper>
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm, emoji]}
+                  remarkPlugins={[remarkGfm, emoji, remarkDirective, remarkDirectiveRehype]}
                   urlTransform={(url) => url}
                   components={{
                     // a links
@@ -221,6 +232,21 @@ const ActivityComment = ({
                     code: (props) => codeTag(props),
                     // @ts-ignore
                     blockquote: (props) => blockquoteTag(props),
+                    // @ts-ignore
+                    tip: (props) => (
+                      <Styled.Tip>
+                        <Icon icon="info" />
+                        {props.children}
+                      </Styled.Tip>
+                    ),
+                    // @ts-ignore
+                    status: (props) => {
+                      return (
+                        <ActivityStatus name={props.id} statuses={statuses}>
+                          {props.children}
+                        </ActivityStatus>
+                      )
+                    },
                   }}
                 >
                   {body}
@@ -239,18 +265,22 @@ const ActivityComment = ({
             </>
           )}
 
-          {/* @ts-ignore */}
-          <MenuContainer id={menuId} target={moreRef.current}>
-            <ActivityCommentMenu onDelete={() => isOwner && handleDelete()} />
-          </MenuContainer>
-          <div style={{ marginTop: '16px' }}>
-            {mappedReactions && (
-              <Reactions
-                reactions={mappedReactions}
-                changeHandler={reactionChangeHandler}
-              />
-            )}
-          </div>
+          {!readOnly && (
+            <MenuContainer id={menuId} target={moreRef.current}>
+              <ActivityCommentMenu onDelete={() => isOwner && handleDelete()} />
+            </MenuContainer>
+          )}
+          {!isEditing && (
+            <div style={{ marginTop: '16px' }}>
+              {mappedReactions && (
+                <Reactions
+                  reactions={mappedReactions}
+                  changeHandler={reactionChangeHandler}
+                  readOnly={readOnly}
+                />
+              )}
+            </div>
+          )}
         </Styled.Body>
       </Styled.Comment>
     </>

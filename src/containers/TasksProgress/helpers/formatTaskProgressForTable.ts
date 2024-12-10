@@ -1,5 +1,9 @@
 import type { FolderType, Status } from '@api/rest/project'
-import { GetTasksProgressResult, ProgressTask } from '@queries/tasksProgress/getTasksProgress'
+import {
+  FolderGroup,
+  ProgressTask,
+  ProgressTaskFolder,
+} from '@queries/tasksProgress/getTasksProgress'
 
 export type TaskTypeRow = {
   name: string
@@ -21,9 +25,11 @@ export type FolderRow = {
   __folderKey: string
   _folder: string
   _parents: string[]
-  _folderIcon?: string | null
+  __folderIcon?: string | null
   __folderType?: string
   __folderId: string
+  __folderUpdatedA?: string
+  __folderStatus?: string
   __projectName: string
   _complete?: number
   [taskType: string]: TaskTypeRow | TaskTypeStatusBar | any
@@ -33,12 +39,16 @@ export type FolderRow = {
   _completeFolders?: number[]
 }
 
-const getParentKey = (parent: GetTasksProgressResult[0]['parent']) =>
+interface FolderTask extends ProgressTaskFolder {
+  projectName: string
+  tasks: (ProgressTask & { isHidden?: boolean })[]
+}
+
+const getParentKey = (parent: FolderGroup['parent']) =>
   parent ? `${parent.id}-${parent.name}` : undefined
 
 export const formatTaskProgressForTable = (
-  data: GetTasksProgressResult,
-  shownColumns: string[] = [],
+  data: FolderTask[],
   collapsedFolders: string[] = [],
   { folderTypes, statuses }: { folderTypes: FolderType[]; statuses: Status[] },
 ): FolderRow[] => {
@@ -77,13 +87,15 @@ export const formatTaskProgressForTable = (
       __isParent: false,
       __parentId: parent?.id,
       __folderKey: folder.parents.length
-        ? folder.parents[folder.parents.length - 1]
+        ? folder.parents[folder.parents.length - 1] + folder.name
         : 'root' + folder.name, // used to sort the folders row
       _folder: folder.label || folder.name,
       _parents: folder.parents,
-      _folderIcon: folderTypes.find((ft) => ft.name === folder.folderType)?.icon,
+      __folderIcon: folderTypes.find((ft) => ft.name === folder.folderType)?.icon,
       __folderId: folder.id,
       __folderType: folder.folderType,
+      __folderUpdatedAt: folder.updatedAt,
+      __folderStatus: folder.status,
       __projectName: folder.projectName,
       _complete: 0,
     }
@@ -96,9 +108,6 @@ export const formatTaskProgressForTable = (
     // groups tasks by type
     activeTasks.forEach((task) => {
       const taskType = task.taskType
-
-      // do not add if hidden
-      if (!!shownColumns.length && !shownColumns.includes(taskType)) return
 
       if (!row[taskType]) {
         row[taskType] = {
@@ -182,14 +191,35 @@ export const formatTaskProgressForTable = (
 
   const rowsArray = Array.from(rows.values())
 
-  // filter out collapsed folders
+  // filter out folders with no tasks
   let filteredRows = rowsArray
-  if (collapsedFolders.length) {
-    filteredRows = rowsArray.filter((row) => {
-      const parent = row.__parentId
-      return !collapsedFolders.includes(parent || '')
-    })
-  }
+  filteredRows = rowsArray.filter((row) => {
+    if (row.__isParent) return true
+    const hasNoTasks = Object.keys(row)
+      .filter((key) => !key.startsWith('_'))
+      .every((taskType) => {
+        const tasks = row[taskType]
+        return tasks && tasks.tasks.length === 0
+      })
+
+    return !hasNoTasks
+  })
+
+  // filter out parent rows that have no children and NOT collapsedFolders
+  filteredRows = filteredRows.filter((row) => {
+    if (!row.__isParent) return true
+
+    return filteredRows.some((r) => r.__parentId === row.__folderId)
+  })
+
+  // filter out tasks where their parent is collapsed
+  filteredRows = filteredRows.filter((row) => {
+    if (row.__isParent) return true
+    const parent = row.__parentId
+    const isCollapsed = collapsedFolders.includes(parent || '')
+
+    return !isCollapsed
+  })
 
   return filteredRows
 }

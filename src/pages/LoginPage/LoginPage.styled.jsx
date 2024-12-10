@@ -50,7 +50,7 @@ export const LoginForm = styled.div`
       width: 24px;
     }
 
-    span {
+    .icon {
       font-size: 24px !important;
     }
   }
