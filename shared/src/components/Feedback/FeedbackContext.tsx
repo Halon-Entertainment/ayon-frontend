@@ -229,6 +229,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
 
   // Load Featurebase script and initialize widgets
   useEffect(() => {
+    return;
     // if skip flag is set, do not load the script
     if (skipFeaturebase) return
     // if not logged in, do not load the script
