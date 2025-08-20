@@ -58,9 +58,9 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
     // Initialize Featurebase
     const win = window as any
     if (typeof win.Featurebase !== 'function') {
-      win.Featurebase = function () {
-        ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
-      }
+      // win.Featurebase = function () {
+      //   ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
+      // }
     }
   }
 
