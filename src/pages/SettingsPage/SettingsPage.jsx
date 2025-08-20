@@ -1,10 +1,13 @@
 import { useMemo, useEffect, lazy } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import { useGetSettingsAddonsQuery } from '@queries/addons/getAddons'
+import { useGetSettingsAddonsQuery } from '@shared/api'
 
 import SettingsAddon from './SettingsAddon'
 import AppNavLinks from '@containers/header/AppNavLinks'
 import { useSelector } from 'react-redux'
+import DocumentTitle from '@components/DocumentTitle/DocumentTitle'
+import useTitle from '@hooks/useTitle'
+import HelpButton from '@components/HelpButton/HelpButton'
 
 const AnatomyPresets = lazy(() => import('./AnatomyPresets/AnatomyPresets'))
 const Bundles = lazy(() => import('./Bundles'))
@@ -15,6 +18,7 @@ const AccessGroups = lazy(() => import('./AccessGroups'))
 const Attributes = lazy(() => import('./Attributes'))
 const Secrets = lazy(() => import('./Secrets'))
 const AddonsManager = lazy(() => import('./AddonsManager'))
+const ServerConfig = lazy(() => import('./ServerConfig/ServerConfig'))
 
 const SettingsPage = () => {
   const { module, addonName } = useParams()
@@ -70,20 +74,27 @@ const SettingsPage = () => {
         return <Attributes />
       case 'secrets':
         return <Secrets />
+      case 'server':
+        return <ServerConfig />
       default:
         return <Navigate to="/settings" />
     }
   }, [module, addonName, addonsData, isManager])
 
   const links = useMemo(() => {
-      const adminExtras = [
-        {
+    const adminExtras = [
+      {
+        name: 'Global',
+        path: '/settings/server',
+        module: 'server',
+        accessLevels: ['admin'],
+      },
+      {
         name: 'Addons',
         path: '/settings/addons',
         module: 'addons',
         accessLevels: ['manager'],
       },
-
       {
         name: 'Bundles',
         path: '/settings/bundles',
@@ -140,7 +151,7 @@ const SettingsPage = () => {
       },
     ]
     if (!isManager) {
-      result = [...adminExtras, ...result];
+      result = [...adminExtras, ...result]
     }
 
     if (!addonsData) return result
@@ -153,12 +164,23 @@ const SettingsPage = () => {
         accessLevels: ['manager'],
       })
     }
-
+      result.push({ node: 'spacer' })
+      
+      const addonTitle = addonName && addonsData
+         ? addonsData.find(addon => addon.name === addonName)?.title
+         : undefined
+      
+      result.push({
+          node: <HelpButton module={addonName || module} pageName={addonTitle} />,
+      })
     return result
   }, [addonsData, isManager])
 
+  const title = useTitle(addonName || module, links, '', '')
+  const revertedTitle = title === 'Studio settings' ? title : title + ' • Studio settings'
   return (
     <>
+      <DocumentTitle title={revertedTitle} />
       <AppNavLinks links={links} />
       {moduleComponent}
     </>

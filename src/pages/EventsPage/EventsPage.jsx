@@ -2,16 +2,17 @@ import { Section, Toolbar, InputText, InputSwitch } from '@ynput/ayon-react-comp
 import { useGetEventsWithLogsQuery, useLazyGetEventsWithLogsQuery } from '@queries/events/getEvents'
 import EventDetail from './EventDetail'
 import { useDispatch } from 'react-redux'
-import api from '@api'
+import api from '@shared/api'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
 import EventList from './EventList'
 import useSearchFilter from '@hooks/useSearchFilter'
 import { toast } from 'react-toastify'
-import useLocalStorage from '@hooks/useLocalStorage'
+import { useLocalStorage } from '@shared/hooks'
 import EventOverview from './EventOverview'
 import { useMemo, useRef, useState } from 'react'
 import { useEffect } from 'react'
 import { debounce } from 'lodash'
+import DocumentTitle from '@components/DocumentTitle/DocumentTitle'
 
 const EventsPage = () => {
   const dispatch = useDispatch()
@@ -206,7 +207,9 @@ const EventsPage = () => {
   }
 
   return (
-    <main>
+    <>
+      <DocumentTitle title="Events • AYON" />
+      <main>
       <Section>
         <Toolbar>
           <form onSubmit={handleSearchSubmit}>
@@ -258,6 +261,7 @@ const EventsPage = () => {
         </Splitter>
       </Section>
     </main>
+    </>
   )
 }
 

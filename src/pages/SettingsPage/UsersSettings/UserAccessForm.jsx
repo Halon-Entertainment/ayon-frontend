@@ -21,7 +21,7 @@ const NoteStyled = styled.span`
   align-items: center;
 `
 
-const UserAccessForm = ({ accessGroupsData, formData, onChange, disabled}) => {
+const UserAccessForm = ({ accessGroupsData, formData, onChange, disabled }) => {
   const authenticatedUser = useSelector((state) => state.user.data)
 
   const userLevels = [
@@ -34,11 +34,6 @@ const UserAccessForm = ({ accessGroupsData, formData, onChange, disabled}) => {
     userLevels.push({ label: 'Admin', value: 'admin' })
   }
 
-  const activeOptions = [
-    { label: 'Active', value: true },
-    { label: 'Inactive', value: false },
-  ]
-
   const updateFormData = (key, value) => {
     onChange && onChange(key, value)
   }
@@ -49,12 +44,12 @@ const UserAccessForm = ({ accessGroupsData, formData, onChange, disabled}) => {
 
   const defaultAccessGroups = formData?.defaultAccessGroups || []
 
-
   const handleDefaultAccessGroupsChange = (value) => {
     updateFormData('defaultAccessGroups', value)
   }
 
-  const isDeveloperSwitchDisabled = () => isUser || isManager || !authenticatedUser.isAdmin
+  const isDeveloperSwitchDisabled = () =>
+    isUser || isManager || !authenticatedUser.isAdmin || !formData?.userActive
 
   const getTooltip = () => {
     if (isUser) {
@@ -72,14 +67,14 @@ const UserAccessForm = ({ accessGroupsData, formData, onChange, disabled}) => {
 
   return (
     <>
-      <b>Access Control</b>
+      <b>Access</b>
+
       <FormLayout>
-        <FormRowStyled label="User active">
-          <SelectButton
-            unselectable={false}
-            value={formData?.userActive}
-            onChange={(e) => updateFormData('userActive', e.value)}
-            options={activeOptions}
+
+        <FormRowStyled label="Disable password">
+          <InputSwitch
+            checked={!!formData?.disablePasswordLogin}
+            onChange={(e) => updateFormData('disablePasswordLogin', !!e.target.checked)}
           />
         </FormRowStyled>
 

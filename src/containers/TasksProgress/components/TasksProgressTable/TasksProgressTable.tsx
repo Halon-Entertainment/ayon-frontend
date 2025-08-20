@@ -19,29 +19,29 @@ import { Body } from '../FolderBody/FolderBody.styled'
 
 // State management
 import { useAppDispatch, useAppSelector } from '@state/store'
-import { selectProgress, toggleDetailsOpen } from '@state/progress'
+import { selectProgress } from '@state/progress'
 import { setFocusedTasks } from '@state/context'
 
 // Types
-import type { Status, TaskType } from '@api/rest/project'
 import type {
   FolderRow,
   TaskTypeRow,
   TaskTypeStatusBar,
 } from '../../helpers/formatTaskProgressForTable'
-import type { Assignees } from '@queries/user/getUsers'
-import { AttributeEnumItem } from '@api/rest/attributes'
+import type { Assignees, Status, TaskType, AttributeEnumItem } from '@shared/api'
 
 // Hooks
 import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { InView } from 'react-intersection-observer'
-import useCreateContext from '@hooks/useCreateContext'
-import useLocalStorage from '@hooks/useLocalStorage'
+import { useCreateContextMenu } from '@shared/containers/ContextMenu'
+import { useTaskProgressViewSettings } from '@shared/containers'
 
 // Helpers
 import { useFolderSort } from '../../hooks'
 import { taskStatusSortFunction } from '@containers/TasksProgress/helpers/taskStatusSortFunction'
 import clsx from 'clsx'
+import { useEntityListsContext } from '@pages/ProjectListsPage/context'
+import { useScopedDetailsPanel } from '@shared/context'
 
 export const Cells = styled.div`
   display: flex;
@@ -60,7 +60,6 @@ interface TasksProgressTableProps
   tableData: FolderRow[]
   projectName: string
   isLoading: boolean
-  selectedFolders: string[]
   activeTask: string | null
   selectedAssignees: string[]
   statuses: Status[]
@@ -75,7 +74,15 @@ interface TasksProgressTableProps
   onCollapseRow: (folderId: string) => void
   onChange: TaskFieldChange
   onSelection: (taskId: string, meta: boolean, shift: boolean) => void
-  onOpenViewer: (taskId: string, quickView: boolean) => void
+  onOpenViewer: ({
+    taskId,
+    folderId,
+    quickView,
+  }: {
+    taskId?: string
+    folderId?: string
+    quickView?: boolean
+  }) => void
 }
 
 export const TasksProgressTable = ({
@@ -83,7 +90,6 @@ export const TasksProgressTable = ({
   tableData = [],
   projectName,
   isLoading,
-  selectedFolders = [],
   activeTask,
   selectedAssignees = [],
   statuses = [], // project statuses schema
@@ -103,7 +109,7 @@ export const TasksProgressTable = ({
 }: TasksProgressTableProps) => {
   const selectedTasks = useAppSelector((state) => state.context.focused.tasks) as string[]
   const progressSelected = useAppSelector((state) => state.progress.selected)
-  const detailsOpen = useAppSelector((state) => state.details.open)
+  const { isOpen: detailsOpen, setOpen } = useScopedDetailsPanel('progress')
   const dispatch = useAppDispatch()
 
   // HACK: this forces a complete rerender of the table
@@ -186,10 +192,18 @@ export const TasksProgressTable = ({
   const sortFolderFunction = useFolderSort(tableData)
 
   const togglePanel = (open: boolean = true) => {
-    dispatch(toggleDetailsOpen(open))
+    setOpen(open)
   }
 
-  const buildContextMenu = (_selection: string[], taskId: string) => {
+  const {
+    buildAddToListMenu,
+    buildListMenuItem,
+    newListMenuItem,
+    tasks: tasksLists,
+  } = useEntityListsContext()
+
+  const buildContextMenu = (selection: string[], taskId: string) => {
+    const selectedEntities = selection.map((id) => ({ entityId: id, entityType: 'task' }))
     return [
       {
         label: detailsOpen ? 'Hide details' : 'Show details',
@@ -201,12 +215,16 @@ export const TasksProgressTable = ({
         label: 'Open in viewer',
         icon: 'play_circle',
         shortcut: 'Spacebar',
-        command: () => onOpenViewer(taskId, false),
+        command: () => onOpenViewer({ taskId, quickView: true }),
       },
+      buildAddToListMenu([
+        ...tasksLists.data.map((list) => buildListMenuItem(list, selectedEntities)),
+        newListMenuItem('task', selectedEntities),
+      ]),
     ]
   }
 
-  const [ctxMenuShow] = useCreateContext()
+  const [ctxMenuShow] = useCreateContextMenu()
 
   const handleContextMenu = (e: MouseEvent<HTMLDivElement>, taskId: string) => {
     // check if the click is within selection already
@@ -223,10 +241,7 @@ export const TasksProgressTable = ({
     ctxMenuShow(e, buildContextMenu(selection, taskId))
   }
 
-  type SavedWidths = { [task: string]: number | null }
-
-  const localStorageKey = `tasks-progress-table-${projectName}`
-  const [savedWidths, setSavedWidths] = useLocalStorage<SavedWidths | null>(localStorageKey, null)
+  const { columns, onUpdateColumns } = useTaskProgressViewSettings()
 
   const resolveColumnWidth = (taskType: string, useDefault?: boolean) => {
     const screenWidthMultiple = (min: number, max: number, target: number): number => {
@@ -236,7 +251,8 @@ export const TasksProgressTable = ({
       return Math.round(Math.min(max, Math.max(min, width)))
     }
 
-    const savedWidth = savedWidths?.[taskType]
+    const column = columns.find((col) => col.name === taskType)
+    const savedWidth = column?.width
     const fullWidth = screenWidthMultiple(180, 250, 13)
     const compactWidth = screenWidthMultiple(80, 150, 10)
     const minWidthPerTask = detailsOpen ? compactWidth : fullWidth
@@ -248,25 +264,43 @@ export const TasksProgressTable = ({
   const handleColumnResize = (e: DataTableColumnResizeEndEvent) => {
     const taskType = e.column.props?.field
     if (!taskType) return console.error('Resize error: No task type found')
-    // const newWidth = Math.round(e.element.clientWidth)
+
     const currentWidth = resolveColumnWidth(taskType)
+
     const delta = e.delta
     const newWidth = currentWidth + delta
 
-    // set the new width to local storage
-    setSavedWidths({
-      ...savedWidths,
-      [taskType]: newWidth,
-    })
+    // Update the columns array
+    const updatedColumns = [...columns]
+    const existingColumnIndex = updatedColumns.findIndex((col) => col.name === taskType)
+
+    if (existingColumnIndex >= 0) {
+      updatedColumns[existingColumnIndex] = {
+        ...updatedColumns[existingColumnIndex],
+        width: newWidth,
+      }
+    } else {
+      updatedColumns.push({
+        name: taskType,
+        visible: true,
+        width: newWidth,
+      })
+    }
+
+    onUpdateColumns(updatedColumns)
   }
 
   const resetColumnWidth = (taskType?: string) => {
     if (!taskType) return console.error('Width reset error: No task type found')
-    // remove taskType from column widths
-    const newWidths = { ...savedWidths }
-    delete newWidths[taskType]
-    taskType && setSavedWidths(newWidths)
 
+    // Remove width from the specific column
+    const updatedColumns = columns
+      .map((col) => (col.name === taskType ? { ...col, width: undefined } : col))
+      .filter(
+        (col) => col.name !== taskType || col.visible !== undefined || col.pinned !== undefined,
+      )
+
+    onUpdateColumns(updatedColumns)
     forceReloadTable()
   }
 
@@ -366,6 +400,7 @@ export const TasksProgressTable = ({
               isExpanded={getIsExpanded(row.__folderId)}
               onExpandToggle={() => onExpandRow(row.__folderId)}
               onFolderOpen={handleFolderOpen}
+              onSpaceKey={() => onOpenViewer({ folderId: row.__folderId, quickView: true })}
             />
           )
         }
@@ -431,14 +466,14 @@ export const TasksProgressTable = ({
                     onSelection(task.id, e.metaKey || e.ctrlKey, e.shiftKey)
                   }
 
-                  // handle hitting enter on the cell
+                  // handle hitting enter or space on the cell
                   const handleCellKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
                     if (e.key === 'Enter') {
                       onSelection(task.id, e.metaKey || e.ctrlKey, e.shiftKey)
                     }
                     if (e.key === ' ') {
                       e.preventDefault()
-                      onOpenViewer(task.id, true)
+                      onOpenViewer({ taskId: task.id, quickView: true })
                     }
                   }
 

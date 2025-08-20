@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import * as Styled from '../util/OnBoardingStep.styled'
-import { ReleaseInfoModel, ReleaseListItemModel } from '@api/rest/releases'
+import { ReleaseInfoModel, ReleaseListItemModel } from '@shared/api'
 import AddonsSelectGrid from '@components/AddonsSelectGrid/AddonsSelectGrid'
 
 type AddonSelectStepProps = {
@@ -26,9 +26,9 @@ export const AddonSelectStep = ({
   isLoadingRelease,
   isLoadingAddons,
 }: AddonSelectStepProps) => {
-  const { addons = [] } = release || {}
+  const { addons = [], mandatoryAddons } = release || {}
   // filter out mandatory addons
-  const notMandatoryAddons = addons.filter((addon) => !addon.mandatory)
+  const notMandatoryAddons = addons.filter((addon) => !mandatoryAddons?.includes(addon.name))
 
   // get placeholders for loading
   const placeholders = useMemo(() => {

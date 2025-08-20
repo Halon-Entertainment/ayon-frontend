@@ -1,8 +1,8 @@
 import { FC, useEffect, useRef, useState } from 'react'
 import * as Styled from './ReviewablesSelector.styled'
 import clsx from 'clsx'
-import FileThumbnail from '../FileThumbnail'
-import { ReviewableModel } from '@/api/rest/review'
+import { FileThumbnail } from '@shared/components'
+import { ReviewableModel } from '@shared/api'
 import isHTMLElement from '@helpers/isHTMLElement'
 import ScrollBar from 'react-perfect-scrollbar'
 
@@ -11,7 +11,7 @@ type ReviewableCard = Pick<ReviewableModel, 'fileId' | 'label' | 'fileId'>
 interface ReviewablesSelectorProps {
   reviewables: ReviewableCard[]
   selected: string[]
-  projectName: string
+  projectName: string | null
   onChange?: (fileId: string) => void
   onUpload: () => void
 }

@@ -6,6 +6,7 @@ import styled from 'styled-components'
 import CollapsedColumn from './KanBanColumn/CollapsedColumn'
 import { useSelector } from 'react-redux'
 import { useTaskSpacebarViewer } from '../hooks'
+import { useScopedDetailsPanel } from '@shared/context'
 
 const StyledWrapper = styled(Section)`
   height: 100%;
@@ -13,6 +14,7 @@ const StyledWrapper = styled(Section)`
   align-items: flex-start;
   justify-content: flex-start;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 0 8px;
 `
 
@@ -31,7 +33,7 @@ const ColumnsWrapper = ({
   const { active } = useDndContext()
   const sectionRef = useRef(null)
   const columnsRefs = useRef({})
-  const detailsOpen = useSelector((state) => state.details.open)
+  const { isOpen } = useScopedDetailsPanel('dashboard')
 
   // find out which column the active card has come from
   const activeColumn = useMemo(() => {
@@ -151,7 +153,7 @@ const ColumnsWrapper = ({
       // scroll the task into view
       sectionRef.current.scrollLeft = offsetLeft - containerWidth + elementWidth + padding
     }
-  }, [active, selectedTasks, wasDragging, detailsOpen])
+  }, [active, selectedTasks, wasDragging, isOpen])
 
   const shortcuts = useTaskSpacebarViewer({
     tasks: allTasks,

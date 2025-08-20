@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { StringParam, useQueryParam, withDefault } from 'use-query-params'
+import DocumentTitle from '@components/DocumentTitle/DocumentTitle'
+import useTitle from '@hooks/useTitle'
 
 import AddonSettings from '@containers/AddonSettings'
 
@@ -10,17 +12,18 @@ import ProjectRoots from './ProjectRoots'
 import NewProjectDialog from './NewProjectDialog'
 
 import { selectProject } from '@state/context'
-import { useDeleteProjectMutation, useUpdateProjectMutation } from '@queries/project/updateProject'
+import { useDeleteProjectMutation, useUpdateProjectMutation } from '@shared/api'
 import TeamsPage from '../TeamsPage'
 import ProjectManagerPageContainer from './ProjectManagerPageContainer'
 import ProjectManagerPageLayout from './ProjectManagerPageLayout'
 import AppNavLinks from '@containers/header/AppNavLinks'
-import confirmDelete from '@helpers/confirmDelete'
+import { confirmDelete } from '@shared/util'
 import useUserProjectPermissions, { UserPermissionsEntity } from '@hooks/useUserProjectPermissions'
 import ProjectUserAccess from './Users/ProjectUserAccess'
 import ProjectPermissions from './ProjectPermissions'
 import { isActiveDecider, projectSorter, Module, ModuleList, ModulePath } from './mappers'
 import { replaceQueryParams } from '@helpers/url'
+import HelpButton from '@components/HelpButton/HelpButton'
 
 const ProjectSettings = ({ projectList, projectManager, projectName }) => {
   return (
@@ -121,13 +124,15 @@ const ProjectManagerPage = () => {
       accessLevels: ['manager'],
     })
 
-    if (userPermissions.canViewAny(UserPermissionsEntity.access) || module === Module.projectAccess) {
+    if (
+      userPermissions.canViewAny(UserPermissionsEntity.access) ||
+      module === Module.projectAccess
+    ) {
       links.push({
         name: 'Project access',
         path: ModulePath[Module.projectAccess],
         module: Module.projectAccess,
         accessLevels: [],
-        shortcut: 'P+A',
       })
     }
   }
@@ -153,14 +158,20 @@ const ProjectManagerPage = () => {
     },
   )
 
-  const linksWithProject = useMemo(
-    () =>
-      links.map((link) => ({
-        ...link,
-        path: replaceQueryParams(link.path, selectedProject ? { project: selectedProject } : {}),
-      })),
-    [links, selectedProject],
-  )
+  const linksWithProject = useMemo(() => {
+    const mappedLinks = links.map((link) => ({
+      ...link,
+      path: replaceQueryParams(link.path, selectedProject ? { project: selectedProject } : {}),
+    }))
+
+    // Add spacer and help button
+    mappedLinks.push({ node: 'spacer' })
+    mappedLinks.push({
+      node: <HelpButton module={module} />,
+    })
+
+    return mappedLinks
+  }, [links, selectedProject, module])
 
   useEffect(() => {
     if (isLoadingUserPermissions || module !== undefined) {
@@ -175,8 +186,11 @@ const ProjectManagerPage = () => {
     }
   }, [isLoadingUserPermissions, selectedProject, module])
 
-  return (
+  const title = useTitle(module, linksWithProject, selectedProject || 'AYON')
+    
+    return (
     <>
+      <DocumentTitle title={title} />
       <AppNavLinks links={linksWithProject} />
       {/* container wraps all modules and provides selectedProject, ProjectList comp and Toolbar comp as props */}
       <ProjectManagerPageContainer

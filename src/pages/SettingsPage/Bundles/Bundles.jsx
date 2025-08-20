@@ -8,15 +8,15 @@ import { useUpdateBundleMutation } from '@queries/bundles/updateBundles'
 import getNewBundleName from './getNewBundleName'
 import NewBundle from './NewBundle'
 import { useListInstallersQuery } from '@queries/installers/getInstallers'
-import { useListAddonsQuery } from '@queries/addons/getAddons'
+import { useListAddonsQuery } from '@shared/api'
 import { upperFirst } from 'lodash'
 import { toast } from 'react-toastify'
 import AddonDialog from '@components/AddonDialog/AddonDialog'
 import { useGetAddonSettingsQuery } from '@queries/addonSettings'
 import getLatestSemver from './getLatestSemver'
-import { api as bundlesApi } from '@api/rest/bundles'
+import { bundlesQueries } from '@queries/bundles/updateBundles'
 import { useDispatch, useSelector } from 'react-redux'
-import useLocalStorage from '@hooks/useLocalStorage'
+import { useLocalStorage } from '@shared/hooks'
 import { Splitter, SplitterPanel } from 'primereact/splitter'
 import { useSearchParams } from 'react-router-dom'
 import Shortcuts from '@containers/Shortcuts'
@@ -109,12 +109,10 @@ const Bundles = () => {
       if (foundDuplicate) {
         handleDuplicateBundle(foundDuplicate.name)
       }
+      // delete
+      searchParams.delete('duplicate')
+      setSearchParams(searchParams)
     }
-
-    // delete
-    searchParams.delete('bundle')
-    searchParams.delete('duplicate')
-    setSearchParams(searchParams)
   }, [searchParams, isLoading, bundleList])
 
   useEffect(() => {
@@ -299,7 +297,7 @@ const Bundles = () => {
           try {
             const patchOld = { ...oldBundle, [statusKey]: false }
             patchResult = dispatch(
-              bundlesApi.util.updateQueryData('listBundles', { archived: true }, (draft) => {
+              bundlesQueries.util.updateQueryData('listBundles', { archived: true }, (draft) => {
                 const bundleIndex = draft.bundles.findIndex(
                   (bundle) => bundle.name === oldBundle.name,
                 )
@@ -368,16 +366,6 @@ const Bundles = () => {
       action: () => setUploadOpen('package'),
     },
     {
-      key: 'S',
-      action: () => toggleBundleStatus('staging', selectedBundles[0]),
-      disabled: selectedBundles.length !== 1,
-    },
-    {
-      key: 'P',
-      action: () => toggleBundleStatus('production', selectedBundles[0]),
-      disabled: selectedBundles.length !== 1,
-    },
-    {
       key: 'D',
       action: () => handleDuplicateBundle(selectedBundles[0]),
       disabled: selectedBundles.length !== 1 && !newBundleOpen,
@@ -397,6 +385,7 @@ const Bundles = () => {
         uploadOpen={uploadOpen}
         setUploadOpen={setUploadOpen}
         uploadHeader={uploadHeader}
+        manager={['installer', 'package'].includes(uploadOpen) ? uploadOpen : null}
       />
       <CopyBundleSettingsDialog
         bundle={copySettingsBundle.bundle}
@@ -406,7 +395,7 @@ const Bundles = () => {
         onCancel={closeCopySettings}
         onFinish={closeCopySettings}
       />
-      <main style={{ overflow: 'hidden' }}>
+      <main>
         <Splitter style={{ width: '100%' }} stateStorage="local" stateKey="bundles-splitter">
           <SplitterPanel style={{ minWidth: 200, width: 400, maxWidth: 800, zIndex: 10 }} size={30}>
             <Section style={{ height: '100%' }}>
