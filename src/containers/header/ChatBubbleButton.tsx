@@ -10,6 +10,8 @@ const ChatBubbleButton: FC<ChatBubbleButtonProps> = ({}) => {
   const hasUnreadMessages = unreadCount > 0
 
   if (!messengerLoaded) return null
+
+  return null
   return (
     <HeaderButton
       style={{ padding: '8px 6px' }}
