@@ -6,6 +6,7 @@ import clsx from 'clsx'
 interface ChatBubbleButtonProps {}
 
 const ChatBubbleButton: FC<ChatBubbleButtonProps> = ({}) => {
+  return null
   const { openSupport, messengerLoaded, unreadCount } = useFeedback()
   const hasUnreadMessages = unreadCount > 0
 
