@@ -57,11 +57,12 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
   const initialize = () => {
     // Initialize Featurebase
     const win = window as any
-    if (typeof win.Featurebase !== 'function') {
-      // win.Featurebase = function () {
-      //   ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
-      // }
-    }
+    // if (typeof win.Featurebase !== 'function') {
+    //   win.Featurebase = function () {
+    //     ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
+    //   }
+    // }
+    win.Featurebase = undefined;
   }
 
   const serverVersion = siteInfo?.version?.split('+')[0] || 'unknown'
