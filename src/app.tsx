@@ -179,60 +179,60 @@ const App = () => {
         <Favicon />
         <WatchActivities />
         <Suspense fallback={<LoadingPage />}>
-          <FeedbackProvider>
-            <RestartProvider>
-              <RemoteModulesProvider skip={!user.name}>
-                <PowerpackProvider>
-                  <ContextMenuProvider>
-                    <DetailsPanelProvider
-                      {...handlerProps}
-                      user={user}
-                      viewer={viewer}
-                      dispatch={dispatch}
-                      useLocation={useLocation}
-                      useNavigate={useNavigate}
-                      useParams={useParams}
-                      useSearchParams={useSearchParams}
-                    >
-                      <GlobalContextMenu />
-                      <PasteProvider>
-                        <PasteModal />
-                        <BrowserRouter>
-                          <NotificationsProvider>
-                            <URIProvider>
-                              <ShortcutsProvider>
-                                <PiPProvider>
-                                  <QueryParamProvider
-                                    adapter={ReactRouter6Adapter}
-                                    options={{
-                                      updateType: 'replaceIn',
-                                    }}
-                                  >
-                                    <Header />
-                                    <ShareDialog />
-                                    <ViewerDialog />
-                                    <ConfirmDialog />
-                                    <FileUploadPreviewContainer />
-                                    <ReleaseInstallerDialog />
-                                    <CompleteProfilePrompt />
-                                    <AppRoutes isUser={isUser} />
-                                    <DetailsPanelFloating />
-                                    <PowerpackDialog />
-                                    <AppRemoteLoader />
-                                    <TrialBanner />
-                                  </QueryParamProvider>
-                                </PiPProvider>
-                              </ShortcutsProvider>
-                            </URIProvider>
-                          </NotificationsProvider>
-                        </BrowserRouter>
-                      </PasteProvider>
-                    </DetailsPanelProvider>
-                  </ContextMenuProvider>
-                </PowerpackProvider>
-              </RemoteModulesProvider>
-            </RestartProvider>
-          </FeedbackProvider>
+          {/*<FeedbackProvider>*/}
+          {/*  <RestartProvider>*/}
+          {/*    <RemoteModulesProvider skip={!user.name}>*/}
+          {/*      <PowerpackProvider>*/}
+          {/*        <ContextMenuProvider>*/}
+          {/*          <DetailsPanelProvider*/}
+          {/*            {...handlerProps}*/}
+          {/*            user={user}*/}
+          {/*            viewer={viewer}*/}
+          {/*            dispatch={dispatch}*/}
+          {/*            useLocation={useLocation}*/}
+          {/*            useNavigate={useNavigate}*/}
+          {/*            useParams={useParams}*/}
+          {/*            useSearchParams={useSearchParams}*/}
+          {/*          >*/}
+          {/*            <GlobalContextMenu />*/}
+          {/*            <PasteProvider>*/}
+          {/*              <PasteModal />*/}
+          {/*              <BrowserRouter>*/}
+          {/*                <NotificationsProvider>*/}
+          {/*                  <URIProvider>*/}
+          {/*                    <ShortcutsProvider>*/}
+          {/*                      <PiPProvider>*/}
+          {/*                        <QueryParamProvider*/}
+          {/*                          adapter={ReactRouter6Adapter}*/}
+          {/*                          options={{*/}
+          {/*                            updateType: 'replaceIn',*/}
+          {/*                          }}*/}
+          {/*                        >*/}
+          {/*                          <Header />*/}
+          {/*                          <ShareDialog />*/}
+          {/*                          <ViewerDialog />*/}
+          {/*                          <ConfirmDialog />*/}
+          {/*                          <FileUploadPreviewContainer />*/}
+          {/*                          <ReleaseInstallerDialog />*/}
+          {/*                          <CompleteProfilePrompt />*/}
+          {/*                          <AppRoutes isUser={isUser} />*/}
+          {/*                          <DetailsPanelFloating />*/}
+          {/*                          <PowerpackDialog />*/}
+          {/*                          <AppRemoteLoader />*/}
+          {/*                          <TrialBanner />*/}
+          {/*                        </QueryParamProvider>*/}
+          {/*                      </PiPProvider>*/}
+          {/*                    </ShortcutsProvider>*/}
+          {/*                  </URIProvider>*/}
+          {/*                </NotificationsProvider>*/}
+          {/*              </BrowserRouter>*/}
+          {/*            </PasteProvider>*/}
+          {/*          </DetailsPanelProvider>*/}
+          {/*        </ContextMenuProvider>*/}
+          {/*      </PowerpackProvider>*/}
+          {/*    </RemoteModulesProvider>*/}
+          {/*  </RestartProvider>*/}
+          {/*</FeedbackProvider>*/}
         </Suspense>
       </>
     ),

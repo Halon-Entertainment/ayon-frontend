@@ -44,14 +44,14 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
   )
 
   const loadScript = () => {
-    if (!scriptLoaded) {
-      const script = document.createElement('script')
-      script.src = 'https://do.featurebase.app/js/sdk.js'
-      script.id = 'featurebase-sdk'
-      script.async = true
-      document.body.appendChild(script)
-      setScriptLoaded(true)
-    }
+    // if (!scriptLoaded) {
+    //   const script = document.createElement('script')
+    //   script.src = 'https://do.featurebase.app/js/sdk.js'
+    //   script.id = 'featurebase-sdk'
+    //   script.async = true
+    //   document.body.appendChild(script)
+    //   setScriptLoaded(true)
+    // }
   }
 
   const initialize = () => {
@@ -393,7 +393,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
     <FeedbackContext.Provider
       value={{
         openSupport,
-        openFeedback,
+        // openFeedback,
         openPortal,
         messengerLoaded,
         unreadCount,
