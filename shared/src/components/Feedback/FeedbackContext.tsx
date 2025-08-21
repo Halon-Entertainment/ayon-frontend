@@ -44,24 +44,25 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
   )
 
   const loadScript = () => {
-    if (!scriptLoaded) {
-      const script = document.createElement('script')
-      script.src = 'https://do.featurebase.app/js/sdk.js'
-      script.id = 'featurebase-sdk'
-      script.async = true
-      document.body.appendChild(script)
-      setScriptLoaded(true)
-    }
+    // if (!scriptLoaded) {
+    //   const script = document.createElement('script')
+    //   script.src = 'https://do.featurebase.app/js/sdk.js'
+    //   script.id = 'featurebase-sdk'
+    //   script.async = true
+    //   document.body.appendChild(script)
+    //   setScriptLoaded(true)
+    // }
   }
 
   const initialize = () => {
     // Initialize Featurebase
     const win = window as any
-    if (typeof win.Featurebase !== 'function') {
-      win.Featurebase = function () {
-        ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
-      }
-    }
+    // if (typeof win.Featurebase !== 'function') {
+    //   win.Featurebase = function () {
+    //     ;(win.Featurebase.q = win.Featurebase.q || []).push(arguments)
+    //   }
+    // }
+    win.Featurebase = undefined;
   }
 
   const serverVersion = siteInfo?.version?.split('+')[0] || 'unknown'
@@ -111,6 +112,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
 
   // MESSENGER WIDGET
   const initializeMessenger = (): void => {
+    return;
     const win = window as any
     if (typeof win.Featurebase === 'function') {
       console.log('Initializing Featurebase messenger widget')
@@ -227,6 +229,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
 
   // Load Featurebase script and initialize widgets
   useEffect(() => {
+    return;
     // if skip flag is set, do not load the script
     if (skipFeaturebase) return
     // if not logged in, do not load the script
@@ -390,7 +393,7 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
     <FeedbackContext.Provider
       value={{
         openSupport,
-        openFeedback,
+        // openFeedback,
         openPortal,
         messengerLoaded,
         unreadCount,
