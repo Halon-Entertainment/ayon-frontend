@@ -2,8 +2,8 @@ import { FC } from 'react'
 import * as Styled from './FolderBody.styled'
 import clsx from 'clsx'
 import { EntityCard } from '@ynput/ayon-react-components'
-import getEntityTypeIcon from '@helpers/getEntityTypeIcon'
-import { Status } from '@api/rest/project'
+import { getEntityTypeIcon } from '@shared/util'
+import type { Status } from '@shared/api'
 
 interface FolderBodyProps {
   folder: {
@@ -18,6 +18,7 @@ interface FolderBodyProps {
   projectName: string
   onExpandToggle: () => void
   onFolderOpen?: (id: string) => void
+  onSpaceKey?: () => void
 }
 
 export const FolderBody: FC<FolderBodyProps> = ({
@@ -27,11 +28,20 @@ export const FolderBody: FC<FolderBodyProps> = ({
   projectName,
   onExpandToggle,
   onFolderOpen,
+  onSpaceKey,
 }) => {
   const thumbnailUrl = `/api/projects/${projectName}/folders/${folder.id}/thumbnail?updatedAt=${folder.updatedAt}`
 
+  // handle hitting enter or space on the cell
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === ' ') {
+      e.preventDefault()
+      onSpaceKey?.()
+    }
+  }
+
   return (
-    <Styled.Body className={clsx({ expanded: isExpanded })}>
+    <Styled.Body className={clsx({ expanded: isExpanded })} onKeyDown={handleKeyDown}>
       <Styled.ExpandButton
         icon={isExpanded ? 'collapse_all' : 'expand_all'}
         variant="text"

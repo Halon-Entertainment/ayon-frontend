@@ -43,7 +43,7 @@ const AddonList = ({
         if (projectName && !addon.hasProjectSiteSettings)
           // project site overrides
           continue
-      } else if (projectName && !addon.hasProjectSettings) continue
+      } else if (projectName && !addon.hasProjectSettings && !addon.isBroken) continue
       else if (!addon.hasSettings && !addon.isBroken) continue
 
       const addonKey = `${addon.name}|${addon.version}|${variant}|${siteId || '_'}|${
@@ -56,6 +56,10 @@ const AddonList = ({
         variant,
       })
     }
+
+    // sort by addon title
+    result.sort((a, b) => a.title.localeCompare(b.title))
+
     return result
   }, [data, variant, siteSettings])
 

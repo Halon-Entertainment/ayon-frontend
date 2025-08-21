@@ -1,12 +1,12 @@
 import { DataTable } from 'primereact/datatable'
 import { Column } from 'primereact/column'
 
-import { Badge, BadgeWrapper } from '@components/Badge'
+import { Badge, BadgeWrapper } from '@shared/components'
 import { TablePanel } from '@ynput/ayon-react-components'
-import useCreateContext from '@hooks/useCreateContext'
+import { useCreateContextMenu } from '@shared/containers/ContextMenu'
 import { useDeleteBundleMutation, useUpdateBundleMutation } from '@queries/bundles/updateBundles'
 import { useMemo } from 'react'
-import confirmDelete from '@helpers/confirmDelete'
+import { confirmDelete } from '@shared/util'
 import { toast } from 'react-toastify'
 import clsx from 'clsx'
 import useTableLoadingData from '@hooks/useTableLoadingData'
@@ -79,14 +79,12 @@ const BundleList = ({
     const isStatus = bundle[key]
     const label = isStatus ? unsetLabel : setLabel
     const icon = isStatus ? 'remove' : 'add'
-    let shortcut = `Shift+${status.charAt(0).toUpperCase()}`
-    if (status === 'dev') shortcut = null
     const command = () => toggleBundleStatus(status, bundle.name)
     const disabled = selectedBundles.length > 1 || disabledExtra
-    return { label, icon, shortcut, command, disabled }
+    return { label, icon, command, disabled }
   }
 
-  const [ctxMenuShow] = useCreateContext([])
+  const [ctxMenuShow] = useCreateContextMenu([])
 
   const onContextMenu = (e) => {
     // get selection and if it's changed or not

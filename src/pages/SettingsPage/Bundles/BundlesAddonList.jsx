@@ -1,13 +1,13 @@
 import React, { useContext, useEffect, useMemo } from 'react'
-import { useListAddonsQuery } from '@queries/addons/getAddons'
+import { useListAddonsQuery } from '@shared/api'
 import { DataTable } from 'primereact/datatable'
 import { Column } from 'primereact/column'
-import { SocketContext } from '@context/websocketContext'
-import { rcompare, coerce } from 'semver'
+import { SocketContext } from '@context/WebsocketContext'
+import { compareBuild, coerce } from 'semver'
 import { InputSwitch, InputText, VersionSelect } from '@ynput/ayon-react-components'
 import { FilePath, LatestIcon } from './Bundles.styled'
-import useCreateContext from '@hooks/useCreateContext'
-import { useNavigate } from 'react-router'
+import { useCreateContextMenu } from '@shared/containers/ContextMenu'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 const StyledDataTable = styled(DataTable)`
@@ -46,10 +46,10 @@ const AddonListItem = ({ version, setVersion, selection, addons = [], versions }
             const foundAddon = addons.find((a) => a.name === s.name)
             if (!foundAddon) return ['NONE']
             const versionList = Object.keys(foundAddon.versions || {})
-            versionList.sort((a, b) => rcompare(a, b))
+            versionList.sort((a, b) => -1 * compareBuild(a, b))
             return [...versionList, 'NONE']
           })
-        : [[...versions.sort((a, b) => rcompare(a, b)), 'NONE']],
+        : [[...versions.sort((a, b) => -1 * compareBuild(a, b)), 'NONE']],
 
     [selection, addons],
   )
@@ -130,13 +130,15 @@ const BundlesAddonList = React.forwardRef(
     }
 
     const addonsTable = useMemo(() => {
-      return addons.map((addon) => {
-        return {
-          ...addon,
-          version: formData?.addons?.[addon.name] || 'NONE',
-          dev: formData?.addonDevelopment?.[addon.name],
-        }
-      })
+      return addons
+        .map((addon) => {
+          return {
+            ...addon,
+            version: formData?.addons?.[addon.name] || 'NONE',
+            dev: formData?.addonDevelopment?.[addon.name],
+          }
+        })
+        .sort((a, b) => a.title.localeCompare(b.title))
     }, [addons, formData])
 
     const createContextItems = (selected) => {
@@ -144,14 +146,14 @@ const BundlesAddonList = React.forwardRef(
         {
           label: 'View in Market',
           icon: 'store',
-          command: () => navigate(`/market/?addon=${selected.name}`),
+          command: () => navigate(`/market/?selected=${selected.name}`),
         },
       ]
 
       return items
     }
 
-    const [ctxMenuShow] = useCreateContext([])
+    const [ctxMenuShow] = useCreateContextMenu([])
 
     const handleContextClick = (e) => {
       let contextSelection = []
@@ -184,8 +186,8 @@ const BundlesAddonList = React.forwardRef(
         ref={ref}
       >
         <Column
-          header="Name"
-          field="name"
+          header="Title"
+          field="title"
           pt={{
             root: {
               style: {
@@ -206,7 +208,7 @@ const BundlesAddonList = React.forwardRef(
             const currentVersion = addon.version
             const allVersions = addon.versions
             const sortedVersions = Object.keys(allVersions).sort((a, b) => {
-              const comparison = rcompare(coerce(a), coerce(b))
+              const comparison = -1 * compareBuild(coerce(a), coerce(b))
               if (comparison === 0) {
                 return b.localeCompare(a)
               }
@@ -249,7 +251,8 @@ const BundlesAddonList = React.forwardRef(
                 <InputText
                   value={addon.dev?.path || ''}
                   style={{ width: '100%' }}
-                  placeholder="/path/to/dev/addon..."
+                  placeholder="/path/to/dev/addon/client"
+                  data-tooltip="Path to the client folder of the addon to run client side code live from source."
                   onChange={(e) =>
                     onDevChange([addon.name], { value: e.target.value, key: 'path' })
                   }

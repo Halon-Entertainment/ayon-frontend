@@ -8,29 +8,21 @@
  * and dispatching breadcrumbs to the store.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 import { useGetAnatomyPresetQuery, useGetAnatomySchemaQuery } from '@queries/anatomy/getAnatomy'
 
-import { useGetProjectAnatomyQuery } from '@queries/project/getProject'
+import { useGetProjectAnatomyQuery } from '@shared/api'
 import { isEqual } from 'lodash'
 
 import { setUri } from '@state/context'
 import SettingsEditor from '@containers/SettingsEditor'
 import { getValueByPath, setValueByPath, sameKeysStructure } from '@containers/AddonSettings/utils'
 import { cloneDeep } from 'lodash'
-import { usePaste } from '@context/pasteContext'
+import { usePaste } from '@context/PasteContext'
 
-const AnatomyEditor = ({
-  preset,
-  projectName,
-  formData,
-  setFormData,
-  breadcrumbs,
-  setBreadcrumbs,
-  setIsChanged,
-}) => {
+const AnatomyEditor = ({ preset, projectName, formData, setFormData, setIsChanged }) => {
   const [originalData, setOriginalData] = useState(null)
   const { requestPaste } = usePaste()
   const { data: schema } = useGetAnatomySchemaQuery()
@@ -97,35 +89,28 @@ const AnatomyEditor = ({
     setFormData(newData)
   }
 
-  if (isLoading) {
-    return 'Loading...'
-  }
+  const editor = useMemo(() => {
+    if (isLoading) {
+      return 'Loading...'
+    }
+    if (!(preset || projectName)) return 'No preset or project selected'
+    if (preset && projectName) return 'Select either preset or project'
+    if (!(schema && originalData)) return null
 
-  if (!(preset || projectName)) return 'No preset or project selected'
-  if (preset && projectName) return 'Select either preset or project'
-  if (!(schema && originalData)) return null
+    return (
+      <SettingsEditor
+        schema={schema}
+        originalData={originalData}
+        formData={formData}
+        onChange={setFormData}
+        context={{
+          onPasteValue: onPasteValue,
+        }}
+      />
+    )
+  }, [schema, originalData, formData, isLoading, preset, projectName, setFormData, onPasteValue])
 
-  const handleBreadcrumbs = (path) => {
-    let uri = projectName ? `ayon+anatomy://${projectName}/` : `ayon+anatomy+preset://${preset}/`
-    uri += path.join('/')
-    dispatch(setUri(uri))
-
-    if (setBreadcrumbs) setBreadcrumbs(path)
-  }
-
-  return (
-    <SettingsEditor
-      schema={schema}
-      originalData={originalData}
-      formData={formData}
-      onChange={setFormData}
-      onSetBreadcrumbs={handleBreadcrumbs}
-      breadcrumbs={breadcrumbs}
-      context={{
-        onPasteValue: onPasteValue,
-      }}
-    />
-  )
+  return editor
 }
 
 export default AnatomyEditor

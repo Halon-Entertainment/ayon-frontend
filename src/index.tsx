@@ -16,8 +16,7 @@ import './styles/loadingShimmer.scss'
 import './styles/index.scss'
 
 import short from 'short-uuid'
-import { SocketProvider } from '@context/websocketContext'
-import registerAddonRemotes from './remote/registerAddonRemotes'
+import { SocketProvider } from '@context/WebsocketContext'
 
 // generate unique session id
 declare global {
@@ -45,9 +44,6 @@ axios.interceptors.response.use(
   },
 )
 
-// register remote modules
-registerAddonRemotes()
-
 /**
  * Render Application
  *
@@ -59,6 +55,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ReduxProvider store={store}>
       <SocketProvider>
+        <div id="root-header" />
         <App />
         <ToastContainer
           position="bottom-right"

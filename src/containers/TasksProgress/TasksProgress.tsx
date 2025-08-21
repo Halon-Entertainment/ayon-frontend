@@ -11,39 +11,37 @@ import {
   getPlaceholderMessage,
 } from './helpers'
 import { useRootFolders } from './hooks'
-import { useGetAllProjectUsersAsAssigneeQuery } from '@queries/user/getUsers'
-import { FolderType, Status, TaskType } from '@api/rest/project'
+// shared
+import { useGetAllProjectUsersAsAssigneeQuery, useUpdateEntitiesMutation } from '@shared/api'
+import type { FolderType, Status, TaskType, AttributeEnumItem } from '@shared/api'
+import { EmptyPlaceholder, FilterFieldType } from '@shared/components'
+import { useTaskProgressViewSettings, type SelectionData, type SliceType } from '@shared/containers'
 import { TaskFieldChange, TasksProgressTable } from './components'
 // state
 import { setFocusedTasks } from '@state/context'
-import { useDispatch } from 'react-redux'
-import { useUpdateEntitiesMutation } from '@queries/entity/updateEntity'
+import { useAppDispatch } from '@state/store'
 import { toast } from 'react-toastify'
 import { Button, Section, ShortcutTag, Spacer, Toolbar } from '@ynput/ayon-react-components'
 import Shortcuts from '@containers/Shortcuts'
 import { openViewer } from '@state/viewer'
-import EmptyPlaceholder from '@components/EmptyPlaceholder/EmptyPlaceholder'
 import './styles.scss'
-import { AttributeEnumItem } from '@api/rest/attributes'
-import { Filter } from '@components/SearchFilter/types'
 import SearchFilterWrapper from '@components/SearchFilter/SearchFilterWrapper'
 import formatFilterAttributesData from './helpers/formatFilterAttributesData'
 import formatFilterTagsData from './helpers/formatFilterTagsData'
-import { useAppSelector } from '@state/store'
-import { useSetFrontendPreferencesMutation } from '@queries/user/updateUser'
-import { FilterFieldType } from '@hooks/useBuildFilterOptions'
 import formatFilterAssigneesData from './helpers/formatFilterAssigneesData'
 import { selectProgress } from '@state/progress'
-import { SelectionData, SliceType, useSlicerContext } from '@context/slicerContext'
+import { useSlicerContext } from '@context/SlicerContext'
 import useFilterBySlice from './hooks/useFilterBySlice'
 import formatSearchQueryFilters from './helpers/formatSearchQueryFilters'
 import { isEmpty } from 'lodash'
 import { RowSelectionState } from '@tanstack/react-table'
+import { QueryFilter } from '@shared/containers/ProjectTreeTable/types/operations'
+import { clientFilterToQueryFilter } from '@shared/containers/ProjectTreeTable/utils'
 
 // what to search by
 const searchFilterTypes: FilterFieldType[] = [
   'attributes',
-  'entitySubType',
+  'taskType',
   'status',
   'assignees',
   'tags',
@@ -71,30 +69,13 @@ const TasksProgress: FC<TasksProgressProps> = ({
   priorities = [],
   projectName,
 }) => {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   const tableRef = useRef<any>(null)
 
   // FILTERS
   //
   //
-  const userName = useAppSelector((state) => state.user.name)
-  const frontendPreferences = useAppSelector((state) => state.user.data.frontendPreferences)
-  const frontendPreferencesFilters: {
-    [page: string]: {
-      [projectName: string]: Filter[]
-    }
-  } = frontendPreferences?.filters
-  const pageFilters = frontendPreferencesFilters?.progress ?? {}
-  const filters = pageFilters[projectName] ?? []
-
-  const [updateUserPreferences] = useSetFrontendPreferencesMutation()
-
-  const setFilters = (value: Filter[]) => {
-    const updatedPageFilters = { ...pageFilters, [projectName]: value }
-    const updatedUserFilters = { ...frontendPreferencesFilters, progress: updatedPageFilters }
-    const updatedFrontendPreferences = { ...frontendPreferences, filters: updatedUserFilters }
-    updateUserPreferences({ userName, patchData: updatedFrontendPreferences })
-  }
+  const { filters: queryFilters, onUpdateFilters: setQueryFilters } = useTaskProgressViewSettings()
 
   // filter out by slice
   const { rowSelection, sliceType, setPersistentRowSelectionData, persistentRowSelectionData } =
@@ -104,43 +85,29 @@ const TasksProgress: FC<TasksProgressProps> = ({
     : persistentRowSelectionData
   const { filter: sliceFilter } = useFilterBySlice()
 
-  const handleFiltersChange = (value: Filter[]) => {
-    setFilters(value)
+  const handleFiltersChange = (value: QueryFilter) => {
+    setQueryFilters(value)
 
     // check if we need to remove the hierarchy filter and clear hierarchy selection
-    if (!value.some((filter) => filter.id === 'hierarchy')) {
+    // Convert QueryFilter to Filter[] to check for hierarchy
+    const hasHierarchyCondition = value.conditions?.some(
+      (condition) => 'key' in condition && condition.key === 'hierarchy',
+    )
+    if (!hasHierarchyCondition) {
       setPersistentRowSelectionData({})
     }
   }
 
-  // if the sliceFilter is not hierarchy and hierarchy is not empty
-  // add the hierarchy to the filters as disabled
-  const filtersWithHierarchy = useMemo(() => {
-    const buildHierarchyFilterOption = (hierarchy: SelectionData): Filter => ({
-      id: 'hierarchy',
-      label: 'Folder',
-      type: 'list_of_strings',
-      values: Object.values(hierarchy).map((item) => ({
-        id: item.id,
-        label: item.label || item.name || item.id,
-      })),
-      isCustom: true,
-      singleSelect: true,
-      fieldType: 'folder',
-      operator: 'OR',
-      isReadonly: true,
-    })
+  // Convert slice filter to QueryFilter for processing
+  const sliceQueryFilter: QueryFilter | null = useMemo(() => {
+    if (!sliceFilter) return null
+    return clientFilterToQueryFilter([sliceFilter])
+  }, [sliceFilter])
 
-    if (sliceFilter && persistedHierarchySelection) {
-      return [buildHierarchyFilterOption(persistedHierarchySelection), ...filters]
-    }
-    return filters
-  }, [sliceFilter, persistedHierarchySelection, filters])
-
-  // build the graphql query filters
-  const queryFilters = useMemo(
-    () => formatSearchQueryFilters(filters, sliceFilter),
-    [filters, sliceFilter],
+  // build the graphql query filters based on the search filters and slice selection
+  const queryFiltersForGraphQL = useMemo(
+    () => formatSearchQueryFilters(queryFilters, sliceQueryFilter),
+    [queryFilters, sliceQueryFilter],
   )
 
   //
@@ -202,13 +169,13 @@ const TasksProgress: FC<TasksProgressProps> = ({
     {
       projectName,
       folderIds: folderIdsToFetch,
-      assignees: queryFilters.assignees,
-      assigneesAny: queryFilters.assigneesAny,
-      tags: queryFilters.tags,
-      tagsAny: queryFilters.tagsAny,
-      taskTypes: queryFilters.taskTypes,
-      statuses: queryFilters.statuses,
-      attributes: queryFilters.attributes,
+      assignees: queryFiltersForGraphQL.assignees,
+      assigneesAny: queryFiltersForGraphQL.assigneesAny,
+      tags: queryFiltersForGraphQL.tags,
+      tagsAny: queryFiltersForGraphQL.tagsAny,
+      taskTypes: queryFiltersForGraphQL.taskTypes,
+      statuses: queryFiltersForGraphQL.statuses,
+      attributes: queryFiltersForGraphQL.attributes,
     },
     { skip: !folderIdsToFetch.length || !projectName },
   )
@@ -242,7 +209,7 @@ const TasksProgress: FC<TasksProgressProps> = ({
     return Array.from(assignees)
   }, [selectedTasksData])
 
-  // FILTERS
+  // FILTERS DATA vvv
   //
   //
   // format attributes data for the search filter (show value suggestions)
@@ -262,7 +229,7 @@ const TasksProgress: FC<TasksProgressProps> = ({
 
   //
   //
-  // FILTERS
+  // FILTERS DATA ^^^
 
   const tableData = useMemo(
     () =>
@@ -376,9 +343,17 @@ const TasksProgress: FC<TasksProgressProps> = ({
   }
 
   const viewerIsOpen = useSelector((state: $Any) => state.viewer.isOpen)
-  const openInViewer = (id: string, quickView: boolean) => {
-    if (id && !viewerIsOpen) {
-      dispatch(openViewer({ taskId: id, projectName: projectName, quickView }))
+  const openInViewer = ({
+    taskId,
+    folderId,
+    quickView,
+  }: {
+    taskId?: string
+    folderId?: string
+    quickView?: boolean
+  }) => {
+    if ((taskId || folderId) && !viewerIsOpen) {
+      dispatch(openViewer({ taskId, folderId, projectName: projectName, quickView }))
     }
   }
 
@@ -414,7 +389,7 @@ const TasksProgress: FC<TasksProgressProps> = ({
       <Section style={{ height: '100%' }} direction="column">
         <Toolbar>
           <SearchFilterWrapper
-            filters={filtersWithHierarchy}
+            queryFilters={queryFilters}
             onChange={handleFiltersChange}
             filterTypes={searchFilterTypes}
             projectNames={[projectName]}
@@ -444,7 +419,6 @@ const TasksProgress: FC<TasksProgressProps> = ({
               tableData={tableData}
               projectName={projectName}
               isLoading={isFetchingTasks}
-              selectedFolders={folderIdsToFetch}
               activeTask={activeTask}
               selectedAssignees={selectedAssignees}
               statuses={statuses} // status icons etc.

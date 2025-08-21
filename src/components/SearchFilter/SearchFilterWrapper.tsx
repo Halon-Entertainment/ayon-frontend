@@ -1,17 +1,21 @@
-import useBuildFilterOptions, { BuildFilterOptions } from '@hooks/useBuildFilterOptions'
-import { FC, useEffect, useState } from 'react'
-import SearchFilter, { SearchFilterProps } from './SearchFilter'
-import { Filter } from './types'
+import { BuildFilterOptions, useBuildFilterOptions } from '@shared/components'
+import { FC, useState, useEffect } from 'react'
 import { ALLOW_GLOBAL_SEARCH, ALLOW_MULTIPLE_SAME_FILTERS } from './featureFlags'
+import { SearchFilter, Filter } from '@ynput/ayon-react-components'
+import {
+  QueryFilter,
+  clientFilterToQueryFilter,
+  queryFilterToClientFilter,
+} from '@shared/containers/ProjectTreeTable'
 
 interface SearchFilterWrapperProps extends BuildFilterOptions {
-  filters: SearchFilterProps['filters']
-  onChange: SearchFilterProps['onChange']
+  queryFilters: QueryFilter
+  onChange: (queryFilter: QueryFilter) => void
   disabledFilters?: string[]
 }
 
 const SearchFilterWrapper: FC<SearchFilterWrapperProps> = ({
-  filters: _filters,
+  queryFilters,
   onChange,
   filterTypes,
   projectNames,
@@ -26,22 +30,31 @@ const SearchFilterWrapper: FC<SearchFilterWrapperProps> = ({
     data,
   })
 
-  // keeps track of the filters whilst adding/removing filters
-  const [filters, setFilters] = useState<Filter[]>(_filters)
+  // Convert QueryFilter to Filter[] for the SearchFilter component
+  const filters = queryFilterToClientFilter(queryFilters, options)
 
-  // update filters when it changes
+  // Use filters directly as initial state and manage changes through onChange
+  const [localFilters, setLocalFilters] = useState<Filter[]>(filters)
+
+  // Update localFilters when filters change
   useEffect(() => {
-    setFilters(_filters)
-  }, [_filters, setFilters])
+    setLocalFilters(filters)
+  }, [JSON.stringify(filters)])
+
+  // Convert Filter[] back to QueryFilter when changes are applied
+  const handleFinish = (newFilters: Filter[]) => {
+    const queryFilter = clientFilterToQueryFilter(newFilters)
+    onChange(queryFilter)
+  }
 
   return (
     <SearchFilter
       options={options}
-      filters={filters}
-      onChange={setFilters}
-      onFinish={(v) => onChange(v)} // when changes are applied
-      allowMultipleSameFilters={ALLOW_MULTIPLE_SAME_FILTERS}
-      allowGlobalSearch={ALLOW_GLOBAL_SEARCH}
+      filters={localFilters}
+      onChange={setLocalFilters}
+      onFinish={handleFinish}
+      enableMultipleSameFilters={ALLOW_MULTIPLE_SAME_FILTERS}
+      enableGlobalSearch={ALLOW_GLOBAL_SEARCH}
       disabledFilters={disabledFilters}
     />
   )

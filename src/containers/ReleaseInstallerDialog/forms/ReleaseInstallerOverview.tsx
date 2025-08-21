@@ -7,7 +7,7 @@ import {
   createReleaseSubtitle,
 } from '../helpers'
 import { ReleaseFormType } from '@state/releaseInstaller'
-import { ReleaseListItemModel } from '@api/rest/releases'
+import { ReleaseListItemModel } from '@shared/api'
 import { ReleaseForm } from '../hooks/useReleaseForm'
 import { Error } from '../ReleaseInstaller.styled'
 import { Icon } from '@ynput/ayon-react-components'
@@ -39,11 +39,13 @@ export const ReleaseInstallerOverview: FC<ReleaseInstallerOverviewProps> = ({
 }) => {
   return (
     <>
-      <p className="bio">
+      <p className="description">
         Releases are official bundles with the latest tested and stable addons, launchers and their
         dependencies for your pipeline.
       </p>
-      <p className="bio">Your install is pre-configured here, but you can adjust it if needed.</p>
+      <p className="description">
+        Your install is pre-configured here, but you can adjust it if needed.
+      </p>
 
       <Card
         title="Release"

@@ -1,6 +1,5 @@
 import { toast } from 'react-toastify'
-import { api, ManageInboxItemApiArg } from '@api/rest/inbox'
-import { $Any } from '@types'
+import { inboxApi, ManageInboxItemApiArg } from '@shared/api'
 import { current } from '@reduxjs/toolkit'
 import { enhancedInboxGraphql } from './getInbox'
 
@@ -14,16 +13,16 @@ export interface Arg extends ManageInboxItemApiArg {
 }
 
 // When reading a message, we need to update the unread count
-const patchUnreadCount = (dispatch: $Any, count: number, important: boolean) => {
+const patchUnreadCount = (dispatch: any, count: number | 'all', important: boolean) => {
   dispatch(
     enhancedInboxGraphql.util.updateQueryData('GetInboxUnreadCount', { important }, (draft) => {
       // console.log('updating unread count: ', draft - count, count)
-      return Math.max(0, draft - count)
+      return count === 'all' ? 0 : Math.max(0, draft - count)
     }),
   )
 }
 
-const enhancedRest = api.enhanceEndpoints({
+const enhancedRest = inboxApi.enhanceEndpoints({
   endpoints: {
     manageInboxItem: {
       async onQueryStarted(
@@ -33,7 +32,7 @@ const enhancedRest = api.enhanceEndpoints({
           last,
           isActiveChange,
           isRead,
-          manageInboxItemRequest: { ids = [], status },
+          manageInboxItemRequest: { ids = [], status, all },
         }: Arg,
         { dispatch, queryFulfilled },
       ) {
@@ -56,7 +55,7 @@ const enhancedRest = api.enhanceEndpoints({
 
         let patchResult
 
-        let messages: $Any[] = []
+        let messages: any[] = []
 
         let tagsToInvalidate = [{ type: 'inbox', id: 'hasUnread' }]
 
@@ -70,12 +69,19 @@ const enhancedRest = api.enhanceEndpoints({
               'GetInboxMessages',
               { last, important, active },
               (draft) => {
-                // find the messages to clear
-                messages = draft.messages
-                  .filter((m) => ids.includes(m.referenceId))
-                  .map((m) => current(m))
-                // filter out the messages to clear
-                draft.messages = draft.messages.filter((m) => !ids.includes(m.referenceId))
+                if (all) {
+                  // add all messages to the messages array (for later)
+                  messages = draft.messages.map((m) => current(m))
+                  // remove all messages
+                  draft.messages = []
+                } else {
+                  // find the messages to clear and add them to the messages array (for later)
+                  messages = draft.messages
+                    .filter((m) => ids.includes(m.referenceId))
+                    .map((m) => current(m))
+                  // filter out the messages to clear
+                  draft.messages = draft.messages.filter((m) => !ids.includes(m.referenceId))
+                }
               },
             ),
           )
@@ -143,15 +149,20 @@ const enhancedRest = api.enhanceEndpoints({
           patchUnreadCount(dispatch, ids.length, important)
         }
 
+        // we are clearing all messages so remove read count from important
+        if (all) {
+          patchUnreadCount(dispatch, 'all', true)
+        }
+
         try {
           await queryFulfilled
 
           // invalidate tags AFTER the query is fulfilled and for ALL apis
           if (tagsToInvalidate.length) {
-            dispatch(api.util.invalidateTags(tagsToInvalidate))
-            dispatch(api.util.invalidateTags(tagsToInvalidate))
+            dispatch(inboxApi.util.invalidateTags(tagsToInvalidate))
+            dispatch(inboxApi.util.invalidateTags(tagsToInvalidate))
           }
-        } catch (error: $Any) {
+        } catch (error: any) {
           const message = `Error: ${error?.error?.data?.detail}`
           console.error(message, error)
           toast.error(message)
@@ -163,3 +174,4 @@ const enhancedRest = api.enhanceEndpoints({
 })
 
 export const { useManageInboxItemMutation } = enhancedRest
+export { enhancedRest as inboxQueries }

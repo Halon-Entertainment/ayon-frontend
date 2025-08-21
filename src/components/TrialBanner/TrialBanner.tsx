@@ -3,12 +3,10 @@ import * as Styled from './TrialBanner.styled'
 import clsx from 'clsx'
 import getTrialDates from './helpers/getTrialDates'
 import getSubscribeLink from './helpers/getSubscribeLink'
-import { useGetYnputCloudInfoQuery } from '@queries/cloud/cloud'
-import useCustomerlyChat from '@hooks/useCustomerly'
 import { useAppSelector } from '@state/store'
 import { Button, Icon } from '@ynput/ayon-react-components'
-import { useGetActiveUsersCountQuery } from '@queries/user/getUsers'
-import useLocalStorage from '@hooks/useLocalStorage'
+import { useGetActiveUsersCountQuery, useGetYnputCloudInfoQuery } from '@shared/api'
+import { useLocalStorage } from '@shared/hooks'
 import { createPortal } from 'react-dom'
 
 interface TrialBannerProps {}
@@ -19,7 +17,7 @@ const TrialBanner: FC<TrialBannerProps> = ({}) => {
 
   const [snooze, setSnooze] = useLocalStorage<number | null>('trialBannerSnooze', null)
 
-  const { data: connect } = useGetYnputCloudInfoQuery()
+  const { data: connect } = useGetYnputCloudInfoQuery(undefined, { skip: !user.name })
   const { isTrialing, left } = getTrialDates(connect?.subscriptions)
   const { formatted, oneDay, oneHour } = left || {}
 
@@ -31,13 +29,10 @@ const TrialBanner: FC<TrialBannerProps> = ({}) => {
   const isSnoozing = getIsSnoozing()
 
   // get the number of users currently active
-  const { data: activeUsersCount = 10 } = useGetActiveUsersCountQuery({})
-
-  const { show, hide } = useCustomerlyChat({
-    position: { desktop: { side: 8, bottom: 52 }, mobile: { side: 8, bottom: 52 } },
-    delay: 2000,
-    disabled: !isTrialing || !!isSnoozing,
-  })
+  const { data: activeUsersCount = 10 } = useGetActiveUsersCountQuery(
+    {},
+    { skip: !isTrialing || !canManage },
+  )
 
   //   check if there is a sub
   if (!connect?.instanceId) return null
@@ -51,15 +46,11 @@ const TrialBanner: FC<TrialBannerProps> = ({}) => {
     const snoozeUntil = now + snoozeTimeHours * 60 * 60 * 1000
 
     setSnooze(snoozeUntil)
-    // hide customerly
-    hide()
   }
 
   const handleShowBanner = () => {
     // show banner
     setSnooze(null)
-    // show customerly
-    show()
   }
 
   // toast.warn('Your free trial is ending soon. Subscribe to keep your data.', { autoClose: false })
@@ -85,7 +76,7 @@ const TrialBanner: FC<TrialBannerProps> = ({}) => {
         <>
           <span>-</span>
           <a
-            href={getSubscribeLink(activeUsersCount, connect.orgName)}
+            href={getSubscribeLink(activeUsersCount, connect?.orgName || '')}
             target="_blank"
             rel="noreferrer"
           >

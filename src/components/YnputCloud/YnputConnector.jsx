@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Section } from '@ynput/ayon-react-components'
+import { Button, Icon, Section } from '@ynput/ayon-react-components'
 import { StringParam, useQueryParam, withDefault } from 'use-query-params'
 import YnputCloudButton from './YnputCloudButton'
 import {
@@ -9,9 +9,11 @@ import {
 } from '@queries/ynputConnect'
 import LoadingPage from '@pages/LoadingPage'
 import * as Styled from './YnputCloud.styled'
-import { useLocation } from 'react-router'
+import { useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import clsx from 'clsx'
+import { isBefore } from 'date-fns'
+import { Link } from 'react-router-dom'
 
 const YnputConnector = ({
   onConnection,
@@ -24,6 +26,7 @@ const YnputConnector = ({
   initIsOpen = false,
   showStatus = true,
   showDisconnect = true,
+  showStudioLink = false,
   smallLogo = false,
   onClick,
   styleContainer,
@@ -45,6 +48,16 @@ const YnputConnector = ({
   const [connect, { isLoading: isLoadingConnect }] = useConnectYnputMutation()
   const [disconnect] = useDiscountYnputMutation()
 
+  const hasTrialExpired = (date) => {
+    if (!date) return false
+    const trialDate = new Date(date)
+    return isBefore(trialDate, new Date())
+  }
+  const hasActiveSub = (subs) => {
+    if (!subs) return false
+    return subs.some((sub) => sub.productType === 'ayon' && !hasTrialExpired(sub.trialEnd))
+  }
+
   useEffect(() => {
     if (queryKey) {
       setQueryKey(undefined)
@@ -54,17 +67,17 @@ const YnputConnector = ({
         .unwrap()
         .then((res) => {
           console.log('ynput account connected', res)
-          onConnection && onConnection(res)
+          onConnection && onConnection(res, hasActiveSub(res.subscriptions))
         })
     }
   }, [queryKey])
 
   useEffect(() => {
     if (!isLoading && onConnection) {
-      if (!isError && connectData && onConnection) {
-        onConnection(true)
+      if (!isError && connectData?.connected && onConnection) {
+        onConnection(true, hasActiveSub(connectData.subscriptions))
       } else {
-        onConnection(false)
+        onConnection(false, false)
       }
     }
   }, [isLoading, isError, connectData, onConnection])
@@ -82,7 +95,7 @@ const YnputConnector = ({
       </Section>
     )
 
-  const isConnected = (connectData && !isError) || user
+  const isConnected = (connectData?.connected && !isError) || user
 
   if (isConnected && hideSignOut) return null
 
@@ -129,7 +142,6 @@ const YnputConnector = ({
         darkMode={isConnected && darkMode}
         {...props}
       />
-
       <Styled.DropdownContainer $isOpen={isOpen}>
         <Styled.Dropdown className="dropdown">
           {productName && <span>{productName}</span>}
@@ -148,6 +160,16 @@ const YnputConnector = ({
           )}
         </Styled.Dropdown>
       </Styled.DropdownContainer>
+      {showStudioLink && isConnected && (
+        <Styled.Links>
+          <Link to={`https://ynput.cloud/org/${connectData.orgName}`} target="_blank">
+            <Button variant="tertiary">
+              Ynput Cloud Account
+              <Icon icon="arrow_right_alt" />
+            </Button>
+          </Link>
+        </Styled.Links>
+      )}
     </Styled.Container>
   )
 }
