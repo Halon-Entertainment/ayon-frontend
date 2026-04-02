@@ -67,7 +67,7 @@ interface CommentInputProps {
   isOpen: boolean
   onOpen?: () => void
   onClose?: () => void
-  extraActions?: React.ReactNode
+  extraActions?: React.ReactNode | ((ctx: { getEditor: () => any }) => React.ReactNode)
 }
 
 const CommentInput: FC<CommentInputProps> = ({
@@ -723,7 +723,9 @@ const CommentInput: FC<CommentInputProps> = ({
                   data-tooltip={'Mention task'}
                   data-shortcut={'@@@'}
                 />
-                {extraActions}
+                {typeof extraActions === 'function'
+                  ? extraActions({ getEditor: () => editorRef.current?.getEditor() })
+                  : extraActions}
               </Styled.Buttons>
             )}
             <Styled.Buttons style={{ marginLeft: 'auto' }}>

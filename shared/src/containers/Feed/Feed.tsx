@@ -381,13 +381,16 @@ export const Feed = ({
             disabled={disabled}
             isLoading={isLoadingNew || !entities.length || isSaving}
             extraActions={
-              inputActionsLoaded && CommentInputActions ? (
-                <CommentInputActions
-                  entityId={entities[0]?.id}
-                  entityType={entityType}
-                  projectName={projectName}
-                />
-              ) : null
+              inputActionsLoaded && CommentInputActions
+                ? ({ getEditor }: { getEditor: () => any }) => (
+                    <CommentInputActions
+                      entityId={entities[0]?.id}
+                      entityType={entityType}
+                      projectName={projectName}
+                      getEditor={getEditor}
+                    />
+                  )
+                : undefined
             }
           />
         )}
