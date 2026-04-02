@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useCallback, useMemo, useRef } from 'react'
+import { ComponentType, useCallback, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import emoji from 'remark-emoji'
 import remarkGfm from 'remark-gfm'
@@ -30,6 +30,8 @@ import { useDetailsPanelContext } from '@shared/context'
 import { useBlendedCategoryColor } from '../CommentInput/hooks/useBlendedCategoryColor'
 import { CategoryTag } from '../ActivityCategorySelect/CategoryTag'
 import ActivityCommentMenu from './ActivityCommentMenu'
+import { useRemoteModules } from '@shared/context/RemoteModulesContext'
+import { useLoadModule } from '@shared/hooks'
 
 type Props = {
   activity: any
@@ -137,27 +139,18 @@ const ActivityComment = ({
 
   const isEditing = editingId === activityId
 
-  const hasChecklist = /^\s*[-*]\s*\[[ xX]\]/m.test(body || '')
+  const { modules } = useRemoteModules()
+  const actionsAddon = modules.find(
+    (m) => m.modules[m.addonName]?.includes('ActivityCommentActions'),
+  )
 
-  const handleCreateSubtasks = async () => {
-    try {
-      const res = await fetch('/api/addons')
-      const data = await res.json()
-      const addon = data?.addons?.find((a: any) => a.name === 'subtasks')
-      const version = addon?.productionVersion
-      if (!version) return
-      await fetch(
-        `/api/addons/subtasks/${version}/projects/${projectName}/subtasks/tasks/${entityId}/promote-from-activity`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activity_id: activityId }),
-        },
-      )
-    } catch {
-      // silently fail
-    }
-  }
+  const [ActivityCommentActions, { isLoaded: actionsLoaded }] = useLoadModule<ComponentType<any> | null>({
+    addon: actionsAddon?.addonName ?? '',
+    remote: actionsAddon?.addonName ?? '',
+    module: 'ActivityCommentActions',
+    fallback: null,
+    skip: !actionsAddon,
+  })
 
   const isRef = referenceType !== 'origin' || showOrigin
 
@@ -397,7 +390,17 @@ const ActivityComment = ({
           activityId={activityId}
           onSelect={() => toggleMenuOpen(false)}
           projectName={projectName}
-          onCreateSubtasks={hasChecklist ? handleCreateSubtasks : undefined}
+          extraActions={
+            actionsLoaded && ActivityCommentActions ? (
+              <ActivityCommentActions
+                body={body}
+                entityId={entityId}
+                projectName={projectName}
+                activityId={activityId}
+                onSelect={() => toggleMenuOpen(false)}
+              />
+            ) : null
+          }
         />
       </MenuContainer>
     </>

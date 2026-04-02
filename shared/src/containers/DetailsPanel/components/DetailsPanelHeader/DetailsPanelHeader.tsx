@@ -39,6 +39,7 @@ type DetailsPanelHeaderProps = {
   onOpenViewer: (args: any) => void
   onEntityFocus: DetailsPanelProps['onEntityFocus']
   entityTypeIcons: EntityTypeIcons
+  extraTabs?: React.ReactNode
 }
 
 const DetailsPanelHeader = ({
@@ -56,6 +57,7 @@ const DetailsPanelHeader = ({
   entityTypeIcons,
   onOpenViewer,
   onEntityFocus,
+  extraTabs,
 }: DetailsPanelHeaderProps) => {
   const { useSearchParams, useNavigate, isDeveloperMode } = useDetailsPanelContext()
   const navigate = useNavigate()
@@ -286,6 +288,7 @@ const DetailsPanelHeader = ({
             currentTab={currentTab}
             onTabChange={onTabChange}
             isLoading={isLoading}
+            extraTabs={extraTabs}
           />
         </Styled.Grid>
       </EntityPanelUploader>

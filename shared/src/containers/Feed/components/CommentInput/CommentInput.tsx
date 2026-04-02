@@ -67,6 +67,7 @@ interface CommentInputProps {
   isOpen: boolean
   onOpen?: () => void
   onClose?: () => void
+  extraActions?: React.ReactNode
 }
 
 const CommentInput: FC<CommentInputProps> = ({
@@ -81,6 +82,7 @@ const CommentInput: FC<CommentInputProps> = ({
   isOpen,
   onOpen,
   onClose,
+  extraActions,
 }) => {
   const {
     projectName,
@@ -721,6 +723,7 @@ const CommentInput: FC<CommentInputProps> = ({
                   data-tooltip={'Mention task'}
                   data-shortcut={'@@@'}
                 />
+                {extraActions}
               </Styled.Buttons>
             )}
             <Styled.Buttons style={{ marginLeft: 'auto' }}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { ComponentType, useCallback, useEffect, useMemo, useRef } from 'react'
 import ActivityItem from './components/ActivityItem'
 import CommentInput from './components/CommentInput/CommentInput'
 import * as Styled from './Feed.styled'
@@ -15,13 +15,14 @@ import { isFilePreviewable } from './components/FileUploadPreview/FileUploadPrev
 import EmptyPlaceholder from '@shared/components/EmptyPlaceholder'
 import { useFeedContext, FEED_NEW_COMMENT } from './context/FeedContext'
 import { Status } from '../ProjectTreeTable/types/project'
-import { useDetailsPanelContext, FeedFilter } from '@shared/context'
+import { useDetailsPanelContext, FeedFilter, useRemoteModules } from '@shared/context'
 import { DetailsPanelEntityType, useGetMyProjectPermissionsQuery } from '@shared/api'
 import mergeAnnotationAttachments from './helpers/mergeAnnotationAttachments'
 import { SavedAnnotationMetadata } from '.'
 import TabHeaderAndFilters, {
   FilterItem,
 } from '../DetailsPanel/components/TabHeaderAndFilters/TabHeaderAndFilters'
+import { useLoadModule } from '@shared/hooks'
 
 // number of activities to get
 export const activitiesLast = 30
@@ -81,6 +82,21 @@ export const Feed = ({
     feedFilter,
     setFeedFilter,
   } = useFeedContext()
+
+  // Load CommentInputActions from addon remotes (e.g. subtasks addon)
+  const { modules } = useRemoteModules()
+  const inputActionsAddon = modules.find(
+    (m) => m.modules[m.addonName]?.includes('CommentInputActions'),
+  )
+  console.log('[MF-2] modules:', modules, 'inputActionsAddon:', inputActionsAddon)
+  const [CommentInputActions, { isLoaded: inputActionsLoaded }] = useLoadModule<ComponentType<any> | null>({
+    addon: inputActionsAddon?.addonName ?? '',
+    remote: inputActionsAddon?.addonName ?? '',
+    module: 'CommentInputActions',
+    fallback: null,
+    skip: !inputActionsAddon,
+  })
+  console.log('[MF-2] inputActionsLoaded:', inputActionsLoaded, 'CommentInputActions:', CommentInputActions)
 
   const {
     openSlideOut,
@@ -366,6 +382,15 @@ export const Feed = ({
             onOpen={() => setEditingId(FEED_NEW_COMMENT)}
             disabled={disabled}
             isLoading={isLoadingNew || !entities.length || isSaving}
+            extraActions={
+              inputActionsLoaded && CommentInputActions ? (
+                <CommentInputActions
+                  entityId={entities[0]?.id}
+                  entityType={entityType}
+                  projectName={projectName}
+                />
+              ) : null
+            }
           />
         )}
       </Styled.FeedContainer>

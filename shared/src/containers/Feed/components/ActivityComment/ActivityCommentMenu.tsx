@@ -1,3 +1,4 @@
+import React from 'react'
 import { Menu } from '@shared/components'
 import { copyToClipboard } from '@shared/util'
 
@@ -5,7 +6,7 @@ interface ActivityCommentMenuProps {
   onDelete?: () => void
   onEdit?: () => void
   onSelect?: () => void
-  onCreateSubtasks?: () => void
+  extraActions?: React.ReactNode
   activityId: string
   projectName: string
 }
@@ -14,7 +15,7 @@ const ActivityCommentMenu = ({
   onDelete,
   onEdit,
   onSelect,
-  onCreateSubtasks,
+  extraActions,
   activityId,
   projectName,
 }: ActivityCommentMenuProps) => {
@@ -56,18 +57,6 @@ const ActivityCommentMenu = ({
     })
   }
 
-  if (onCreateSubtasks) {
-    items.push({
-      id: 'create-subtasks',
-      label: 'Create subtasks from this',
-      icon: 'checklist',
-      onClick: () => {
-        onSelect?.()
-        onCreateSubtasks()
-      },
-    })
-  }
-
   if (onDelete) {
     items.push({
       id: 'delete',
@@ -81,7 +70,12 @@ const ActivityCommentMenu = ({
     })
   }
 
-  return <Menu menu={items} />
+  return (
+    <>
+      <Menu menu={items} />
+      {extraActions}
+    </>
+  )
 }
 
 export default ActivityCommentMenu

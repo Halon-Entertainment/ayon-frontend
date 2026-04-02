@@ -1,5 +1,5 @@
 import { Button } from '@ynput/ayon-react-components'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { ComponentType, useEffect, useMemo, useRef, useState } from 'react'
 import useDetailsPanelURLSync from './hooks/useDetailsPanelURLSync'
 import * as Styled from './DetailsPanel.styled'
 
@@ -15,8 +15,10 @@ import {
   useDetailsPanelContext,
   useScopedDetailsPanel,
   useURIContext,
+  useRemoteModules,
   FeedFilter,
 } from '@shared/context'
+import { useLoadModule } from '@shared/hooks'
 
 import DetailsPanelHeader from './components/DetailsPanelHeader/DetailsPanelHeader'
 import DetailsPanelFiles from './components/DetailsPanelFiles'
@@ -94,6 +96,19 @@ const DetailsPanelInner = ({
   guestCategories = {},
 }: // optional tab state for independent tab management
 DetailsPanelProps) => {
+  // Load DetailsPanelExtraTabs from addon remotes
+  const { modules } = useRemoteModules()
+  const tabsAddon = modules.find(
+    (m) => m.modules[m.addonName]?.includes('DetailsPanelExtraTabs'),
+  )
+  const [DetailsPanelExtraTabs, { isLoaded: extraTabsLoaded }] = useLoadModule<ComponentType<any> | null>({
+    addon: tabsAddon?.addonName ?? '',
+    remote: tabsAddon?.addonName ?? '',
+    module: 'DetailsPanelExtraTabs',
+    fallback: null,
+    skip: !tabsAddon,
+  })
+
   const {
     closeSlideOut,
     openPip,
@@ -404,6 +419,17 @@ DetailsPanelProps) => {
           entityTypeIcons={entityTypeIcons}
           onOpenViewer={(args) => onOpenViewer?.(args)}
           onEntityFocus={onEntityFocus}
+          extraTabs={
+            extraTabsLoaded && DetailsPanelExtraTabs ? (
+              <DetailsPanelExtraTabs
+                entityType={activeEntityType}
+                entityId={entities?.[0]?.id}
+                projectName={projectNames[0]}
+                currentTab={currentTab}
+                onTabChange={setTab}
+              />
+            ) : null
+          }
         />
 
         <ProjectContextProvider projectName={firstProject}>

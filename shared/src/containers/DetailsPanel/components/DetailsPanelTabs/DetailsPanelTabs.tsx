@@ -17,6 +17,7 @@ interface DetailsPanelTabsProps {
   currentTab: DetailsPanelTab
   onTabChange: (tab: DetailsPanelTab) => void
   isLoading?: boolean
+  extraTabs?: React.ReactNode
 }
 
 const DetailsPanelTabs: FC<DetailsPanelTabsProps> = ({
@@ -24,6 +25,7 @@ const DetailsPanelTabs: FC<DetailsPanelTabsProps> = ({
   currentTab,
   onTabChange,
   isLoading,
+  extraTabs,
 }) => {
   const showFeedTab = !entitiesWithoutFeed.includes(entityType)
   const showSubtasksTab = entitiesWithSubtasks.includes(entityType)
@@ -51,6 +53,7 @@ const DetailsPanelTabs: FC<DetailsPanelTabsProps> = ({
           variant="text"
         />
       )}
+      {extraTabs}
       <Spacer />
       {showFilesTab && (
         <Button
