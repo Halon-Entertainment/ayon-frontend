@@ -188,6 +188,9 @@ const ActivityComment = ({
     skip: !bodyOverrideAddon,
   })
 
+  // Subtask card comments are generated — suppress edit/delete
+  const isSubtaskCard = !!activity?.activityData?.subtaskCard
+
   const isRef = referenceType !== 'origin' || showOrigin
 
   const handleDelete = async () => {
@@ -284,7 +287,7 @@ const ActivityComment = ({
         <Styled.Body className={clsx('comment-body', { isEditing })}>
           {!readOnly && (
             <Styled.Tools className={'tools'}>
-              {isOwner && handleEditComment && (
+              {isOwner && handleEditComment && !isSubtaskCard && (
                 <Styled.ToolButton icon="edit_square" onClick={handleEditComment} variant="text" />
               )}
               <Styled.ToolButton
@@ -426,8 +429,8 @@ const ActivityComment = ({
         }}
       >
         <ActivityCommentMenu
-          onDelete={canDelete && onDelete ? deleteConfirmation : undefined}
-          onEdit={isOwner && handleEditComment}
+          onDelete={!isSubtaskCard && canDelete && onDelete ? deleteConfirmation : undefined}
+          onEdit={!isSubtaskCard && isOwner && handleEditComment}
           activityId={activityId}
           onSelect={() => toggleMenuOpen(false)}
           projectName={projectName}
