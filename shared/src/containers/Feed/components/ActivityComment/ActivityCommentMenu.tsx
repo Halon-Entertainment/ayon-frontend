@@ -5,6 +5,7 @@ interface ActivityCommentMenuProps {
   onDelete?: () => void
   onEdit?: () => void
   onSelect?: () => void
+  onCreateSubtasks?: () => void
   activityId: string
   projectName: string
 }
@@ -13,6 +14,7 @@ const ActivityCommentMenu = ({
   onDelete,
   onEdit,
   onSelect,
+  onCreateSubtasks,
   activityId,
   projectName,
 }: ActivityCommentMenuProps) => {
@@ -50,6 +52,18 @@ const ActivityCommentMenu = ({
       onClick: () => {
         onSelect?.()
         onEdit()
+      },
+    })
+  }
+
+  if (onCreateSubtasks) {
+    items.push({
+      id: 'create-subtasks',
+      label: 'Create subtasks from this',
+      icon: 'checklist',
+      onClick: () => {
+        onSelect?.()
+        onCreateSubtasks()
       },
     })
   }

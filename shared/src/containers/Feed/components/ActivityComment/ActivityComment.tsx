@@ -137,6 +137,28 @@ const ActivityComment = ({
 
   const isEditing = editingId === activityId
 
+  const hasChecklist = /^\s*[-*]\s*\[[ xX]\]/m.test(body || '')
+
+  const handleCreateSubtasks = async () => {
+    try {
+      const res = await fetch('/api/addons')
+      const data = await res.json()
+      const addon = data?.addons?.find((a: any) => a.name === 'subtasks')
+      const version = addon?.productionVersion
+      if (!version) return
+      await fetch(
+        `/api/addons/subtasks/${version}/projects/${projectName}/subtasks/tasks/${entityId}/promote-from-activity`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activity_id: activityId }),
+        },
+      )
+    } catch {
+      // silently fail
+    }
+  }
+
   const isRef = referenceType !== 'origin' || showOrigin
 
   const handleDelete = async () => {
@@ -375,6 +397,7 @@ const ActivityComment = ({
           activityId={activityId}
           onSelect={() => toggleMenuOpen(false)}
           projectName={projectName}
+          onCreateSubtasks={hasChecklist ? handleCreateSubtasks : undefined}
         />
       </MenuContainer>
     </>
