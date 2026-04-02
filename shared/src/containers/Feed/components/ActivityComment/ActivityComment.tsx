@@ -32,6 +32,7 @@ import { CategoryTag } from '../ActivityCategorySelect/CategoryTag'
 import ActivityCommentMenu from './ActivityCommentMenu'
 import { useRemoteModules } from '@shared/context/RemoteModulesContext'
 import { useLoadModule } from '@shared/hooks'
+import MFErrorBoundary from '@shared/components/MFErrorBoundary'
 
 type Props = {
   activity: any
@@ -335,6 +336,7 @@ const ActivityComment = ({
               {/* MF-4: addon body override wraps the markdown body.
                   The MF component renders its own UI when it claims the
                   activity (e.g. subtask cards), otherwise renders children. */}
+              <MFErrorBoundary>
               <ActivityCommentBodyWrapper
                 Override={bodyOverrideLoaded ? ActivityCommentBodyOverride : null}
                 activity={activity}
@@ -386,6 +388,7 @@ const ActivityComment = ({
                   </ReactMarkdown>
                 </CommentWrapper>
               </ActivityCommentBodyWrapper>
+              </MFErrorBoundary>
               {/* file uploads */}
               {/* @ts-ignore */}
               <FilesGrid
@@ -436,13 +439,15 @@ const ActivityComment = ({
           projectName={projectName}
           extraActions={
             actionsLoaded && ActivityCommentActions ? (
-              <ActivityCommentActions
-                body={body}
-                entityId={entityId}
-                projectName={projectName}
-                activityId={activityId}
-                onSelect={() => toggleMenuOpen(false)}
-              />
+              <MFErrorBoundary>
+                <ActivityCommentActions
+                  body={body}
+                  entityId={entityId}
+                  projectName={projectName}
+                  activityId={activityId}
+                  onSelect={() => toggleMenuOpen(false)}
+                />
+              </MFErrorBoundary>
             ) : null
           }
         />

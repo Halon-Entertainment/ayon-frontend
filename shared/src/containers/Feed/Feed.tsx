@@ -13,6 +13,7 @@ import clsx from 'clsx'
 import useScrollToHighlighted from './hooks/useScrollToHighlighted'
 import { isFilePreviewable } from './components/FileUploadPreview/FileUploadPreview'
 import EmptyPlaceholder from '@shared/components/EmptyPlaceholder'
+import MFErrorBoundary from '@shared/components/MFErrorBoundary'
 import { useFeedContext, FEED_NEW_COMMENT } from './context/FeedContext'
 import { Status } from '../ProjectTreeTable/types/project'
 import { useDetailsPanelContext, FeedFilter, useRemoteModules } from '@shared/context'
@@ -383,12 +384,14 @@ export const Feed = ({
             extraActions={
               inputActionsLoaded && CommentInputActions
                 ? ({ getEditor }: { getEditor: () => any }) => (
-                    <CommentInputActions
-                      entityId={entities[0]?.id}
-                      entityType={entityType}
-                      projectName={projectName}
-                      getEditor={getEditor}
-                    />
+                    <MFErrorBoundary>
+                      <CommentInputActions
+                        entityId={entities[0]?.id}
+                        entityType={entityType}
+                        projectName={projectName}
+                        getEditor={getEditor}
+                      />
+                    </MFErrorBoundary>
                   )
                 : undefined
             }

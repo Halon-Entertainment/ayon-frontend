@@ -19,6 +19,7 @@ import {
   FeedFilter,
 } from '@shared/context'
 import { useLoadModule } from '@shared/hooks'
+import MFErrorBoundary from '@shared/components/MFErrorBoundary'
 
 import DetailsPanelHeader from './components/DetailsPanelHeader/DetailsPanelHeader'
 import DetailsPanelFiles from './components/DetailsPanelFiles'
@@ -421,13 +422,15 @@ DetailsPanelProps) => {
           onEntityFocus={onEntityFocus}
           extraTabs={
             extraTabsLoaded && DetailsPanelExtraTabs ? (
-              <DetailsPanelExtraTabs
-                entityType={activeEntityType}
-                entityId={entities?.[0]?.id}
-                projectName={projectNames[0]}
-                currentTab={currentTab}
-                onTabChange={setTab}
-              />
+              <MFErrorBoundary>
+                <DetailsPanelExtraTabs
+                  entityType={activeEntityType}
+                  entityId={entities?.[0]?.id}
+                  projectName={projectNames[0]}
+                  currentTab={currentTab}
+                  onTabChange={setTab}
+                />
+              </MFErrorBoundary>
             ) : null
           }
         />
