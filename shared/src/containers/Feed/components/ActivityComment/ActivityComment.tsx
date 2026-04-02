@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ComponentType, useCallback, useMemo, useRef } from 'react'
+import { ComponentType, ReactNode, useCallback, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import emoji from 'remark-emoji'
 import remarkGfm from 'remark-gfm'
@@ -52,6 +52,29 @@ type Props = {
   readOnly?: boolean
   isSlideOut?: boolean
   statuses: Status[]
+}
+
+// MF-4: Thin wrapper that delegates to an addon's body override component
+// if loaded, otherwise renders children (the default markdown body).
+// The override component receives activity + projectName and renders
+// children (fallback) when it doesn't claim the activity.
+const ActivityCommentBodyWrapper = ({
+  Override,
+  activity,
+  projectName,
+  children,
+}: {
+  Override: ComponentType<any> | null
+  activity: any
+  projectName: string
+  children: ReactNode
+}) => {
+  if (!Override) return <>{children}</>
+  return (
+    <Override activity={activity} projectName={projectName}>
+      {children}
+    </Override>
+  )
 }
 
 const ActivityComment = ({
@@ -150,6 +173,19 @@ const ActivityComment = ({
     module: 'ActivityCommentActions',
     fallback: null,
     skip: !actionsAddon,
+  })
+
+  // MF-4: Allow addons to override the comment body rendering
+  // (e.g. subtask cards instead of plain markdown)
+  const bodyOverrideAddon = modules.find(
+    (m) => m.modules[m.addonName]?.includes('ActivityCommentBodyOverride'),
+  )
+  const [ActivityCommentBodyOverride, { isLoaded: bodyOverrideLoaded }] = useLoadModule<ComponentType<any> | null>({
+    addon: bodyOverrideAddon?.addonName ?? '',
+    remote: bodyOverrideAddon?.addonName ?? '',
+    module: 'ActivityCommentBodyOverride',
+    fallback: null,
+    skip: !bodyOverrideAddon,
   })
 
   const isRef = referenceType !== 'origin' || showOrigin
@@ -293,55 +329,60 @@ const ActivityComment = ({
             />
           ) : (
             <>
-              <CommentWrapper>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, emoji, remarkDirective, remarkDirectiveRehype]}
-                  urlTransform={(url) => url}
-                  components={{
-                    // a links
-                    // @ts-ignore
-                    a: (props) =>
+              {/* MF-4: addon body override wraps the markdown body.
+                  The MF component renders its own UI when it claims the
+                  activity (e.g. subtask cards), otherwise renders children. */}
+              <ActivityCommentBodyWrapper
+                Override={bodyOverrideLoaded ? ActivityCommentBodyOverride : null}
+                activity={activity}
+                projectName={projectName}
+              >
+                <CommentWrapper>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, emoji, remarkDirective, remarkDirectiveRehype]}
+                    urlTransform={(url) => url}
+                    components={{
                       // @ts-ignore
-                      aTag(props, {
-                        entityId,
-                        userName,
-                        projectName,
-                        projectInfo,
-                        onReferenceClick,
-                        onReferenceTooltip: setRefTooltip,
-                        activityId,
-                        categoryPrimary: categoryData?.color,
-                        categorySecondary: blendedCategoryColor.secondary,
-                      }),
-                    // checkbox inputs
-                    // @ts-ignore
-                    input: (props) => inputTag(props, { activity, onCheckChange }),
-                    // code syntax highlighting
-                    // eslint-disable-next-line
-                    // @ts-ignore
-                    code: (props) => codeTag(props),
-                    // @ts-ignore
-                    blockquote: (props) => blockquoteTag(props),
-                    // @ts-ignore
-                    tip: (props) => (
-                      <Styled.Tip>
-                        <Icon icon="info" />
-                        {props.children}
-                      </Styled.Tip>
-                    ),
-                    // @ts-ignore
-                    status: (props) => {
-                      return (
-                        <ActivityStatus name={props.id} statuses={statuses}>
+                      a: (props) =>
+                        // @ts-ignore
+                        aTag(props, {
+                          entityId,
+                          userName,
+                          projectName,
+                          projectInfo,
+                          onReferenceClick,
+                          onReferenceTooltip: setRefTooltip,
+                          activityId,
+                          categoryPrimary: categoryData?.color,
+                          categorySecondary: blendedCategoryColor.secondary,
+                        }),
+                      // @ts-ignore
+                      input: (props) => inputTag(props, { activity, onCheckChange }),
+                      // @ts-ignore
+                      code: (props) => codeTag(props),
+                      // @ts-ignore
+                      blockquote: (props) => blockquoteTag(props),
+                      // @ts-ignore
+                      tip: (props) => (
+                        <Styled.Tip>
+                          <Icon icon="info" />
                           {props.children}
-                        </ActivityStatus>
-                      )
-                    },
-                  }}
-                >
-                  {body}
-                </ReactMarkdown>
-              </CommentWrapper>
+                        </Styled.Tip>
+                      ),
+                      // @ts-ignore
+                      status: (props) => {
+                        return (
+                          <ActivityStatus name={props.id} statuses={statuses}>
+                            {props.children}
+                          </ActivityStatus>
+                        )
+                      },
+                    }}
+                  >
+                    {body}
+                  </ReactMarkdown>
+                </CommentWrapper>
+              </ActivityCommentBodyWrapper>
               {/* file uploads */}
               {/* @ts-ignore */}
               <FilesGrid

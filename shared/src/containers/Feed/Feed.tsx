@@ -88,7 +88,6 @@ export const Feed = ({
   const inputActionsAddon = modules.find(
     (m) => m.modules[m.addonName]?.includes('CommentInputActions'),
   )
-  console.log('[MF-2] modules:', modules, 'inputActionsAddon:', inputActionsAddon)
   const [CommentInputActions, { isLoaded: inputActionsLoaded }] = useLoadModule<ComponentType<any> | null>({
     addon: inputActionsAddon?.addonName ?? '',
     remote: inputActionsAddon?.addonName ?? '',
@@ -96,7 +95,6 @@ export const Feed = ({
     fallback: null,
     skip: !inputActionsAddon,
   })
-  console.log('[MF-2] inputActionsLoaded:', inputActionsLoaded, 'CommentInputActions:', CommentInputActions)
 
   const {
     openSlideOut,
